@@ -4,5 +4,8 @@ from .mydef_ import exp
 from .mydef_ import numerical_diff
 from .mydef_ import Square
 from .mydef_ import Exp
-
+from .mydef_ import setup_variable
+from .config_ import Config
 __all__ = ['Variable', 'square', 'Square', 'Exp','exp','numerical_diff']
+
+setup_variable()#设置Variable类的属性
