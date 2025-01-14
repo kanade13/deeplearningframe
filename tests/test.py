@@ -32,13 +32,19 @@ print(x.grad,y.grad)
 
 def himmelblau(x,y):
     return (x**2+y-11)**2+(x+y**2-7)**2
+'''
 x=Variable(np.array(1.0))
 y=Variable(np.array(1.0))
 z=himmelblau(x,y)
 z.backward()
 print(x.grad,y.grad)
 
-
+'''
+x=np.array([1,2])
+y=np.array([[1,2],[3,4]])
+print(x.dot(y))
+z=np.array([1,2,3])
+print(x.dot(z))
 
 
 

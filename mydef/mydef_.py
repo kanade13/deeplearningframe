@@ -86,8 +86,9 @@ class Variable:
 
     def backward(self,retain_grad=False):
         if self.grad is None:
-            self.grad = np.ones_like(self.data)#none的时候默认为1(因为是最后一个)
+            #self.grad = np.ones_like(self.data)#none的时候默认为1(因为是最后一个)
                                                 #使grad与data类型一样
+            self.grad = Variable(np.ones_like(self.data))
         funcs = []
         seen_set = set()
         if self.creator is not None:
@@ -106,7 +107,7 @@ class Variable:
                 if x.grad is None:
                     x.grad = gx
                 else:
-                    x.grad = x.grad + gx  # 累加梯度
+                    x.grad = x.grad + gx  # 如果不是 None，说明已经有梯度值，需要将新的梯度 gx 累加到现有的梯度上
                 if x.creator is not None and x.creator not in seen_set:
                     #print(x.generation)
                     heapq.heappush(funcs, (-x.creator.generation, x.creator))
@@ -115,7 +116,7 @@ class Variable:
             #例如y=add(x,x)的情况,如果不使用seen_set,会出现x.grad=2*x.grad
             #修改了此处使得支持多输入
             
-            #TODO:使用优先队列的计算图,初步测试通过,需要进一步进行单元测试
+            #TODO:使用优先队列的计算图,初步测试通过,可能需要进一步进行单元测试
 
             if not retain_grad:
                 for y in f.outputs:
