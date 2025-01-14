@@ -6,7 +6,7 @@ import heapq
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from config_ import Config
+from config_ import Config, using_config
 
 class Variable:
     __array_priority__ = 100 #即使运算中包含ndarray实例，也会优先调用Variable实例的方法
@@ -84,7 +84,7 @@ class Variable:
     # input   creator
 
 
-    def backward(self,retain_grad=False):
+    def backward(self,retain_grad=False,create_graph=False):
         if self.grad is None:
             #self.grad = np.ones_like(self.data)#none的时候默认为1(因为是最后一个)
                                                 #使grad与data类型一样
@@ -98,10 +98,12 @@ class Variable:
             #print(funcs)
             _, f = heapq.heappop(funcs)  # 取出优先队列中优先级最高的函数
             gygrad = [output().grad for output in f.outputs]
-            gxgrad = f.backward(*gygrad)
+            #gxgrad = f.backward(*gygrad)
             
-            if not isinstance(gxgrad, tuple):
-                gxgrad = (gxgrad,)
+            with using_config("enable_backprop", create_graph):
+                gxgrad=f.backward(*gygrad)
+                if not isinstance(gxgrad, tuple):
+                    gxgrad = (gxgrad,)
             
             for x, gx in zip(f.inputs, gxgrad):
                 if x.grad is None:
@@ -167,7 +169,14 @@ class Function:
         warnings.warn("backward() of Function is not implemented yet, use a subclass", stacklevel=2)
         raise NotImplementedError()
         
-    
+def check(l: list):
+    for idx, i in enumerate(l):
+        if not isinstance(i, Variable):
+            warnings.warn("input is not a Variable instance, it will be converted to Variable instance")
+            l[idx] = Variable(i)  # 修改列表中的实际内容
+            return False
+    return True
+
 class Exp(Function):
     def forward(self, x):
         return np.exp(x)
@@ -214,8 +223,12 @@ def rsub(x, y):
 class Mul(Function):
     def forward(self, x:np.ndarray, y:np.ndarray):
         return x * y
-    def backward(self, gy):
+    def backward(self, gy:Variable):
         x, y = self.inputs
+        #如果gy不是Variable实例,发出一个警告,并将其转化为Variable实例
+        if not isinstance(gy,Variable):
+            warnings.warn("gy is not a Variable instance, it will be converted to Variable instance")
+            gy=Variable(gy)
         return y * gy, x * gy
 def mul(x, y):
     x1=as_variable(x)
@@ -231,7 +244,8 @@ class Div(Function):
     def forward(self, x, y):
         return x / y
     def backward(self, gy):
-        x, y = self.inputs[0].data, self.inputs[1].data
+        x, y = self.inputs[0], self.inputs[1]
+        check([x,y,gy])
         gx = gy / y
         gy = gy * (-x / y ** 2)
         return gx,gy
@@ -249,7 +263,8 @@ class Pow(Function):
     def forward(self, x):
         return x ** self.c
     def backward(self, gy):
-        x=self.inputs[0].data
+        x=self.inputs[0]
+        check([x,gy])
         gx = self.c * x ** (self.c - 1) * gy
         return gx
 def pow(x, c):
