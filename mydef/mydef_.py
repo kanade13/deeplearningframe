@@ -159,6 +159,7 @@ class Function:
     def __call__(self, *inputs):
         inputs=[as_variable(input) for input in inputs]
         x = [x.data for x in inputs]
+        #for input in inputs:
         y = self.forward(*x) #解包,相当于self.forward(x[0],x[1],...)
         if not isinstance(y, tuple):#如果y不是元组，将其转化为元组
             y = (y,)
@@ -196,8 +197,8 @@ class Exp(Function):
     def forward(self, x):
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
-        x = self.input.data #TODO:尚未修改
-        gx = np.exp(x) * gy
+        x = self.inputs[0] 
+        gx = exp(x) * gy#调用exp,exp调用__call__,__call__中取data后调用forward
         return gx
     
 def exp(x):
@@ -209,7 +210,7 @@ class Square(Function):
         return x**2
     def backward(self, gy):
         print("gy",gy)
-        x = self.inputs[0].data #暂时为inputs[0],应该是正确的
+        x = self.inputs[0] #为inputs[0],是正确的
         gx = 2*x*gy
         return gx
 def square(x):
@@ -252,7 +253,7 @@ class Mul(Function):
     def forward(self, x:np.ndarray, y:np.ndarray):
         return x * y
     def backward(self, gy:Variable):
-        x, y = self.inputs[0].data,self.inputs[1].data
+        x, y = self.inputs[0],self.inputs[1]
         #如果gy不是Variable实例,发出一个警告,并将其转化为Variable实例
         if not isinstance(gy,Variable):
             warnings.warn("gy is not a Variable instance, it will be converted to Variable instance")
@@ -274,7 +275,7 @@ class Div(Function):
     def forward(self, x, y):
         return x / y
     def backward(self, gy):
-        x, y = self.inputs[0].data,self.inputs[1].data
+        x, y = self.inputs[0],self.inputs[1]
         check([x,y,gy])
         gx = gy / y
         gy = gy * (-x / y ** 2)
@@ -336,11 +337,11 @@ class Sum(Function):
         
     def foward(self, x):
         self.x_shape = x.shape
-        y = x.sum(axis = self.axis, keepdims = self.keepdims)
+        y = np.sum(x, axis = self.axis, keepdims = self.keepdims)
         return y
     
     def backward(self, gy):
-        gy = np.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#书中为ultis.reshape_sum_backward
+        gy = ultis.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#书中为ultis.reshape_sum_backward
         gx = broadcast_to(gy, self.x_shape)
         return gx
     
@@ -357,7 +358,7 @@ class BroadcastTo(Function):
         return y
     
     def backward(self, gy):
-        gx = sum_to(gy, self.x_shape)#书中为ultis.sum_to
+        gx = ultis.sum_to(gy, self.x_shape)#书中为ultis.sum_to
         return gx
 def broadcast_to(x, shape):
     if x.shape == shape:
@@ -384,7 +385,7 @@ def sum_to(x, shape):
 
 class MatMul(Function):
     def forward(self, x, W):
-        y = x.dot(W)
+        y = np.dot(x, W)
         return y
     
     def backward(self, gy):
@@ -395,6 +396,52 @@ class MatMul(Function):
     
 def matmul(x, W):
     return MatMul()(x, W)
+
+def MeanSquareError(Function):
+    def forward(self, x0, x1):
+        diff = x0 - x1
+        y = (diff ** 2).sum() / len(diff)
+        return y
+    
+    def backward(self ,gy):
+        x0 ,x1 = self.inputs
+        diff = x0 - x1
+        gx0 = gy * diff *(2. / len(diff))
+        gx1 = -gx0
+        return gx0, gx1
+    
+def meansquarederror(x0 ,x1):
+    return MeanSquareError()(x0, x1)
+
+def linear_simple(x, W, b=None):
+    t = matmul(x, W)
+    if b is None:
+        return t
+    y=t+b
+    t.data=None
+    return y
+
+#linear还没写完
+class linear(Function):
+    def forward(self, x, W, b=None):
+        t = matmul(x, W)
+        if b == None:
+            return t
+        return t+b
+    
+    #def backward()
+
+class Sigmoid(Function):
+    def forward(self, x):
+        y = 1 / (1+np.exp(-x))
+        return y
+    
+    def backward(self, gy):
+        gx = gy * self.outputs * (1-self.outputs)
+        return gx
+    
+def sigmoid(x):
+    return Sigmoid()(x)
 
 def setup_variable():
     Variable.__add__ = add

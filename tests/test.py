@@ -6,6 +6,7 @@ from mydef import *
 from mydef import Variable
 from mydef import MatMul
 from mydef import Exp
+from mydef import Add,Sum
 #from mydef import as_variable
 
 '''
@@ -138,12 +139,46 @@ print(y)
 #z.backward()
 #print(x.grad)
 '''
-
-x=Variable(np.array([2,3]))
+'''
+x=Variable(np.array([[2,3],[4,5]]))
 y=Variable(np.array([[3],[2]]))
 A=MatMul()
-#B=Exp()
+B=Square()
+#z=B(x)
+#print(z)
+y=x.T()
+print(y)
+y.backward()
+print(x.grad)
+
+x=Variable(np.array([2,3]))
+y=Variable(np.array([4,5]))
+A=Add()
 z=A(x,y)
-print(z)
-z.backward()
-print(x.grad,y.grad)
+    '''
+def sum(x, axis=None, keepdims=False):
+    return Sum(axis, keepdims)(x)
+M=MatMul()
+np.random.seed(0)
+x = np.random.rand(100, 1)
+y = 5 + 2 * x + np.random.rand(100, 1)
+x, y = Variable(x), Variable(y) # 可以省略
+W = Variable(np.zeros((1, 1)))
+b = Variable(np.zeros(1))
+def predict(x):
+    y = M(x, W) + b
+    return y
+def mean_squared_error(x0, x1):
+    diff = x0 - x1
+    return sum(diff ** 2) / len(diff)
+lr = 0.1
+iters = 100
+for i in range(iters):
+    y_pred = predict(x)
+    loss = mean_squared_error(y, y_pred)
+    W.cleargrad()
+    b.cleargrad()
+    loss.backward()
+    W.data -= lr * W.grad.data
+    b.data -= lr * b.grad.data
+    print(W, b, loss)
