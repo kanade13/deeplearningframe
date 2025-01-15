@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from config_ import Config, using_config
-
+import utils
 class Variable:
     __array_priority__ = 100 #即使运算中包含ndarray实例，也会优先调用Variable实例的方法
     def __init__(self,  data:np.ndarray,name=None):
@@ -358,7 +358,7 @@ class Sum(Function):
         return y
     
     def backward(self, gy):
-        gy = ultis.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#书中为ultis.reshape_sum_backward
+        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#书中为ultis.reshape_sum_backward
         gx = broadcast_to(gy, self.x_shape)
         return gx
     
@@ -375,7 +375,7 @@ class BroadcastTo(Function):
         return y
     
     def backward(self, gy):
-        gx = ultis.sum_to(gy, self.x_shape)#书中为ultis.sum_to
+        gx = utils.sum_to(gy, self.x_shape)#书中为ultis.sum_to
         return gx
 def broadcast_to(x, shape):
     if x.shape == shape:
@@ -516,7 +516,7 @@ def softmax_cross_entropy_simple(x, t):
     N=x.shape[0]
 
     p = softmax_simple(x)
-    p = clip(p, 1e-15, 1.0)
+    p = np.clip(p, 1e-15, 1.0)
     log_p = log(p)
     tlog_p = log_p[np.arange(N), t.data]
     y = -1 * sum(tlog_p) / N
