@@ -1,8 +1,13 @@
 import numpy as np
 import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))#将mydef文件夹加入环境变量
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from mydef import *
+from mydef import Variable
+from mydef import Reshape
+#from mydef import as_variable
 
+'''
 def sphere(x,y):
     return x**2+y**2
 x=Variable(np.array(1.0))
@@ -28,11 +33,12 @@ y=Variable(np.array(1.0))
 z=goldstein(x,y)
 z.backward()
 print(x.grad,y.grad)
+'''
 
-
+'''
 def himmelblau(x,y):
     return (x**2+y-11)**2+(x+y**2-7)**2
-'''
+
 x=Variable(np.array(1.0))
 y=Variable(np.array(1.0))
 z=himmelblau(x,y)
@@ -40,28 +46,31 @@ z.backward()
 print(x.grad,y.grad)
 
 '''
+'''
 x=np.array([1,2])
 y=np.array([[1,2],[3,4]])
 print(x.dot(y))
 z=np.array([1,2,3])
-print(x.dot(z))
+print(x.dot(z))'''
 
+'''
+x=Variable((np.array(2.0)))
+#c=Variable(np.array(3))
+y=x**5;
+y.backward(create_graph=True)
+print(x.grad)
 
+gx=x.grad
+x.cleargrad()
+gx.backward()
+print(x.grad)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+x=Variable(np.array([2.0,3.0]))
+y=2*x
+z=2*x.data
+print(y,type(y))
+print(z,type(z))
+'''
 
 '''
 x=Variable(np.array(2.0))
@@ -119,3 +128,19 @@ z.backward()
 print(x.grad)#12.0
 print(y.grad)#8.0'''
 
+'''
+x=Variable(np.array([[1,2,3],[4,5,6]]))
+y=Reshape([3,2])(x)
+print(y)
+#z=x.reshape(6)
+#print(z)
+#z.backward()
+#print(x.grad)
+'''
+
+x=Variable(np.array(1))
+y=Variable(np.array([1,2,3]))
+z=x+y
+print(z)
+z.backward()
+print(x.grad,y.grad)

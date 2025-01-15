@@ -123,11 +123,20 @@ class Variable:
             if not retain_grad:
                 for y in f.outputs:
                     y().grad = None  # 释放中间变量(弱引用)的梯度
+                    
+    def reshape(self, *shape):
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return reshape(self, shape)
+    
+    def sum(self, axis=None, keepdims=False):
+        return sum(self, axis, keepdims)
 
 def as_array(x):
     if np.isscalar(x):
         return np.array(x)
     return x
+
 def as_variable(obj):
     if isinstance(obj, Variable):
         return obj
@@ -155,10 +164,10 @@ class Function:
             for output in outputs:
                 output.set_creator(self)
             self.inputs=inputs
-
-        self.outputs=[weakref.ref(output) for output in outputs]
+            self.outputs=[weakref.ref(output) for output in outputs]
 
         return outputs if len(outputs) > 1 else outputs[0]#如果只有一个输出，直接返回元素,否则返回列表
+   
     def __lt__(self, other):
         return self.generation < other.generation  #如果 priority 相同且 task 之间未定义默认比较顺序，则两个 (priority, task) 元组之间的比较会报错。
     def forward(self, x:np.ndarray):
@@ -201,30 +210,43 @@ def square(x):
     return Square()(x)
 
 class Add(Function):
-    def forward(self, x0,x1):
-        y=x0+x1
+    def forward(self, x0, x1):
+        self.x0_shape = x0.shape
+        self.x1_shape = x1.shape
+        y = x0 + x1
         return y
     def backward(self, gy):
-        return gy, gy
+        gx0, gx1 = gy, gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = sum_to(gx0, self.x0_shape)
+            gx1 = sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 def add(x0, x1):
     return Add()(x0, x1)
 
 class Sub(Function):
     def forward(self, x, y):
+        self.x_shape = x.shape
+        self.y_shape = y.shape
         return x - y
     def backward(self, gy):
-        return gy, -gy
+        gx, gy = gy, gy
+        if self.x_shape != self.y_shape:
+            gx = sum_to(gx, self.x_shape)
+            gy = sum_to(gy, self.y_shape)
+        return gx, -gy
 def sub(x, y):
     y=as_array(y)
     return Sub()(x, y)
 def rsub(x, y):
     y=as_array(y)
     return Sub()(y, x)
+
 class Mul(Function):
     def forward(self, x:np.ndarray, y:np.ndarray):
         return x * y
     def backward(self, gy:Variable):
-        x, y = self.inputs
+        x, y = self.inputs[0].data,self.inputs[1].data
         #如果gy不是Variable实例,发出一个警告,并将其转化为Variable实例
         if not isinstance(gy,Variable):
             warnings.warn("gy is not a Variable instance, it will be converted to Variable instance")
@@ -233,6 +255,7 @@ class Mul(Function):
 def mul(x, y):
     x1=as_variable(x)
     return Mul()(x1, y)#???
+
 class Neg(Function):
     def forward(self, x):
         return -x
@@ -240,11 +263,12 @@ class Neg(Function):
         return -gy
 def neg(x): 
     return Neg()(x)
+
 class Div(Function):
     def forward(self, x, y):
         return x / y
     def backward(self, gy):
-        x, y = self.inputs[0], self.inputs[1]
+        x, y = self.inputs[0].data,self.inputs[1].data
         check([x,y,gy])
         gx = gy / y
         gy = gy * (-x / y ** 2)
@@ -270,6 +294,88 @@ class Pow(Function):
 def pow(x, c):
     return Pow(c)(x)
 
+class Reshape(Function):
+    def __init__(self, shape):
+        self.shape = shape
+        
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.reshape(x, self.shape)
+        return y
+    
+    def backward(self, gy):
+        return reshape(gy, self.x_shape)
+    
+def reshape(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return Reshape(shape)(x)
+
+class Transpose(Function):
+    def forward(self, x):
+        y = np.transpose(x)
+        return y
+        
+    def backward(self, gy):
+        gx = transpose(gy)
+        return gx
+
+def transpose(x):
+    return Transpose()(x)
+
+class Sum(Function):
+    def __init__(self, axis, keepdims):
+        self.axis = axis
+        self.keepdims = keepdims
+        
+    def foward(self, x):
+        self.x_shape = x.shape
+        y = x.sum(axis = self.axis, keepdims = self.keepdims)
+        return y
+    
+    def backward(self, gy):
+        gy = np.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#书中为ultis.reshape_sum_backward
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+    
+def sum(x, axis=None, keepdims=False):
+    return Sum(axis, keepdims)(x)
+
+class BroadcastTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+        
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.broadcast_to(x, self.shape)
+        return y
+    
+    def backward(self, gy):
+        gx = sum_to(gy, self.x_shape)#书中为ultis.sum_to
+        return gx
+def broadcast_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return BroadcastTo(shape)(x)
+
+class SumTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+        
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.sum_to(x, self.shape)
+        return y
+    
+    def backward(self, gy):
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+def sum_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return SumTo(shape)(x)
+
 def setup_variable():
     Variable.__add__ = add
     Variable.__radd__ = add
@@ -281,6 +387,6 @@ def setup_variable():
     Variable.__truediv__ = div
     Variable.__rtruediv__ = rdiv
     Variable.__pow__ = pow
+    
 if __name__ == "__main__":
     pass
-
