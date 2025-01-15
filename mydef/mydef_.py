@@ -131,6 +131,12 @@ class Variable:
     
     def sum(self, axis=None, keepdims=False):
         return sum(self, axis, keepdims)
+    
+    def transpose(self):
+        return transpose(self)
+    
+    def T(self):
+        return transpose(self)
 
 def as_array(x):
     if np.isscalar(x):
@@ -375,6 +381,20 @@ def sum_to(x, shape):
     if x.shape == shape:
         return as_variable(x)
     return SumTo(shape)(x)
+
+class MatMul(Function):
+    def forward(self, x, W):
+        y = x.dot(W)
+        return y
+    
+    def backward(self, gy):
+        x, W=self.inputs
+        gx = matmul(gy, W.T)
+        gW = matmul(x.T, gy)
+        return gx,gW
+    
+def matmul(x, W):
+    return MatMul()(x, W)
 
 def setup_variable():
     Variable.__add__ = add

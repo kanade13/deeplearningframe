@@ -4,7 +4,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))#将
 #sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from mydef import *
 from mydef import Variable
-from mydef import Reshape
+from mydef import MatMul
+from mydef import Exp
 #from mydef import as_variable
 
 '''
@@ -138,9 +139,11 @@ print(y)
 #print(x.grad)
 '''
 
-x=Variable(np.array(1))
-y=Variable(np.array([1,2,3]))
-z=x+y
+x=Variable(np.array([2,3]))
+y=Variable(np.array([[3],[2]]))
+A=MatMul()
+#B=Exp()
+z=A(x,y)
 print(z)
 z.backward()
 print(x.grad,y.grad)
