@@ -625,8 +625,8 @@ class Optimizer:
         params = [p for p in self.target.params if p.grad is not None]
 
         #预处理(可选)
-        for f in self.hooks:
-            f(params)
+        #for f in self.hooks:
+        #    f(params)
 
         for param in params:
             self.update_one(param)
