@@ -642,6 +642,32 @@ def SGD(Optimizer):
     def update_one(self, param):
         param.data -= self.lr * param.grad.data
     
+def accuracy(y, t):
+    y, t = as_variable(y), as_variable(t)
+
+    pred = y.data.argmax(axis = 1).reshape(t.shape)
+    result = (pred == t.data)
+    acc = result.mean()
+    return Variable(as_array(acc))
+
+def recall(y, t):#计算precision,recall和f_score
+    y, t = as_variable(y), as_variable(t)
+
+    pred = y.data.argmax(axis = 1).reshape(t.shape)
+    tp=0
+    fp=0
+    fn=0
+    for i in len(pred):
+        if pred[i] == t[i] and pred[i] == 1:
+            tp = tp + 1
+        if pred[i] == 0 and t[i] == 1:
+            fn = fn + 1
+        if pred[i] == 1 and t[i] == 0:
+            fp = fp + 1
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    f_score = 1 / (1 / precision + 1 / recall)
+    return precision, recall, f_score
 
 def setup_variable():
     Variable.__add__ = add
