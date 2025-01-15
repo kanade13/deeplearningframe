@@ -3,6 +3,33 @@ from mydef import *
 import numpy as np
 import os
 import subprocess
+def sum_to(x, shape):
+    """
+    求和操作，使数组 x 的形状变为目标形状 shape。
+    
+    参数:
+        x (np.ndarray): 输入数组。
+        shape (tuple): 目标形状。
+        
+    返回:
+        np.ndarray: 经过求和后具有目标形状的数组。
+    """
+    # 检查目标形状是否是输入形状的前缀
+    assert len(shape) <= len(x.shape), "目标形状的维度不能超过输入形状的维度"
+    for i, s in enumerate(shape):
+        assert s == x.shape[i] or s == 1, f"目标形状 {shape} 无法与输入形状 {x.shape} 对齐"
+    
+    # 计算需要进行求和的维度,收集到一个元组中
+    axes_to_sum = tuple(i for i in range(len(x.shape)) if i >= len(shape) or x.shape[i] != shape[i])
+    
+    # 对指定的维度进行求和
+    result = np.sum(x, axis=axes_to_sum, keepdims=True)
+    
+    # 去掉多余的维度
+    return result.reshape(shape)
+
+
+
 def _dot_var(v, verbose=False):#verbose为True时，打印变量的形状和类型
     dot_var = '{} [label="{}", color=orange, style=filled]\n'
     name = '' if v.name is None else v.name
@@ -68,7 +95,12 @@ def plot_dot_graph(output, verbose=True, to_file='graph.png'):
         pass
 
 if __name__ == '__main__':
-    def goldstein(x,y):
+    x = np.array([[1, 2, 3], [4, 5, 6]])
+    y=sum_to(x,(1,3)) 
+    y=sum_to(x,(2,1))
+    print(x)
+    print(y)
+    '''def goldstein(x,y):
         return (1+(x+y+1)**2*(19-14*x+3*x**2-14*y+6*x*y+3*y**2))*(30+(2*x-3*y)**2*(18-32*x+12*x**2+48*y-36*x*y+27*y**2))
     x=Variable(np.array(1.0))
     y=Variable(np.array(1.0))
@@ -79,3 +111,4 @@ if __name__ == '__main__':
     y.name='y'
     z.name='z'
     plot_dot_graph(z, verbose=False, to_file='goldstein.png')
+    '''

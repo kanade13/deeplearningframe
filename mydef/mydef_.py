@@ -138,6 +138,9 @@ class Variable:
     def T(self):
         return transpose(self)
 
+class Parameter(Variable):
+    pass
+
 def as_array(x):
     if np.isscalar(x):
         return np.array(x)
@@ -204,6 +207,20 @@ class Exp(Function):
 def exp(x):
     return Exp()(x)#这里不用传入self
 
+def log2(base, x):#以base为底的对数
+    return np.log(x) / np.log(base)
+
+class Log(Function):
+    def forward(self, x):
+        return log2(2, x)
+
+    def backward(self, gy):
+        x = self.inputs[0]
+        gx = gy / x
+        return gx
+
+def log(x):
+    return Log()(x)
 
 class Square(Function):
     def forward(self, x):
@@ -318,7 +335,7 @@ def reshape(x, shape):
         return as_variable(x)
     return Reshape(shape)(x)
 
-class Transpose(Function):
+class Transpose(Function):#transpose仅可用于矩阵转置，不可用于向量，向量实现转置需使用reshape
     def forward(self, x):
         y = np.transpose(x)
         return y
@@ -421,15 +438,18 @@ def linear_simple(x, W, b=None):
     t.data=None
     return y
 
-#linear还没写完
-class linear(Function):
+class Linear(Function):
     def forward(self, x, W, b=None):
         t = matmul(x, W)
         if b == None:
             return t
         return t+b
     
-    #def backward()
+    def backward(self, x, W, b=None):
+        return W.T()
+
+def linear(x, W, b=None):
+    return Linear()(x, W, b)
 
 class Sigmoid(Function):
     def forward(self, x):
@@ -443,6 +463,186 @@ class Sigmoid(Function):
 def sigmoid(x):
     return Sigmoid()(x)
 
+class GetItem(Function):
+    def __init__(self, slices):
+        self.slices = slices
+
+    def forward(self, x):
+        y = x[self.slices]
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        f = GetItemGrad(self.slices, x.shape)
+        return f(gy)
+
+def get_item(x, slices):
+    return GetItem(slices)(x)
+
+class GetItemGrad(Function):
+    def __init__(self, slices, in_shape):
+        self.slices = slices
+        self.in_shape = in_shape
+
+    def forward(self, gy):
+        gx = np.zeros(self.in_shape)
+        np.add.at(gx, self.slices, gy)
+        return gx
+
+    def backward(self, ggx):
+        return get_item(ggx, self.slices)
+
+def softmax_simple(x):
+    x = as_variable(x)
+    y = exp(x)
+    sum_y = sum(y)
+    return y / sum_y
+
+class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都是一个样本,对应的输出的每一行都是一个y的概率分布
+    def forward(self, x, axis = 1):
+        y = exp(x)
+        sum_y = sum(y, axis = axis, keepdims = True)
+        return y / sum_y
+
+    def backward(self, gy):
+        raise NotImplementedError()
+        #TODO:softmax函数求导
+
+def softmax(x):
+    return SoftMax()(x)
+
+def softmax_cross_entropy_simple(x, t):
+    x, t=as_variable(x), as_variable(t)
+    N=x.shape[0]
+
+    p = softmax_simple(x)
+    p = clip(p, 1e-15, 1.0)
+    log_p = log(p)
+    tlog_p = log_p[np.arange(N), t.data]
+    y = -1 * sum(tlog_p) / N
+    return y
+
+class Layer:
+    def __init__(self):
+        self._params = set()
+    
+    def __setattr__(self, name, value):
+        if isinstance(value, (Parameter, Layer)):
+            self._params.add(name)
+        super().__setattr__(name, value)
+
+    def __call__(self, *inputs):
+        outputs = self.foward(*inputs)
+        if not isinstance(outputs,tuple):
+            outputs = ((outputs,))
+        self.inputs = [weakref.ref(input) for input in inputs]
+        self.outputs = [weakref.ref(output) for output in outputs]
+        return outputs if len(outputs)>1 else outputs[0]
+
+    def forward(self, *inputs):
+        raise NotImplementedError()
+
+    def params(self):
+        for name in self.params:
+            obj = self.__dict__[name]
+
+            if isinstance(obj, Layer):
+                yield from obj.params()
+            else:
+                yield obj
+
+    def cleargrads(self):
+        for param in self.params():
+            param.cleargrad()
+
+class TwoLayerNet(Layer):
+    def __init__(self, hidden_size, out_size):
+        super().__init__()
+        self.l1 = Linear(hidden_size)
+        self.l2 = Linear(out_size)
+
+    def forward(self, x):
+        y = sigmoid(self.l1(x))
+        y = self.l2(y)
+        return y
+
+class MLP(Layer):
+    def __init__(self, fc_output_sizes, activation=sigmoid):
+        super()._init__()
+        self.activation = activation
+        self.layers = []
+
+        for i, output_size in enumerate(fc_output_sizes):
+            layer = Linear(output_size)
+            setattr(self, 'l'+str(i), layer)
+            self.layers.append(layer)
+
+    def forward(self, x):
+        for l in self.layers[:-1]:
+            x = self.activation(l(x))
+        return self.layers[-1](x)
+
+
+
+class Linear(Layer):
+    def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
+        super().__init__()
+        self.in_size = in_size
+        self.out_size = out_size
+        self.dtype = dtype
+
+        self.W = Parameter(None, name = 'W')
+        if self.in_size is not None:
+            self.__init__W()
+
+        if nobias:
+            self.b = None
+        self.b = Parameter(np.zeros(0, dtype=dtype), name = 'b')
+
+    def __init__W(self):
+        I, O = self.in_size, self.out_size
+        W_data = np.random.randn(I, O).astype(self.dtype) * np.sqrt(1 / I)
+        self.W.data = W_data
+
+    def forward(self, x):
+        if self.W.data is not None:
+            self.in_size = x.shape[1]
+            self.__init__W()
+
+        y = linear(x, self.W, self.b)
+        return y
+
+class Optimizer:
+    def __init__(self):
+        self.target = None
+        self.hooks = []
+
+    def setup(self, target):
+        self.target = target
+        return self
+
+    def update(self):
+        params = [p for p in self.target.params if p.grad is not None]
+
+        #预处理(可选)
+        for f in self.hooks:
+            f(params)
+
+        for param in params:
+            self.update_one(param)
+
+    def update_one(self, params):
+        raise NotImplementedError()
+
+def SGD(Optimizer):
+    def __init__(self, lr=0.01):
+        super().__init__()
+        self.lr = lr
+
+    def update_one(self, param):
+        param.data -= self.lr * param.grad.data
+    
+
 def setup_variable():
     Variable.__add__ = add
     Variable.__radd__ = add
@@ -454,6 +654,7 @@ def setup_variable():
     Variable.__truediv__ = div
     Variable.__rtruediv__ = rdiv
     Variable.__pow__ = pow
-    
+    Variable.__getitem__ = get_item
+
 if __name__ == "__main__":
     pass

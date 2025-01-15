@@ -156,6 +156,7 @@ y=Variable(np.array([4,5]))
 A=Add()
 z=A(x,y)
     '''
+'''
 def sum(x, axis=None, keepdims=False):
     return Sum(axis, keepdims)(x)
 M=MatMul()
@@ -181,4 +182,10 @@ for i in range(iters):
     loss.backward()
     W.data -= lr * W.grad.data
     b.data -= lr * b.grad.data
-    print(W, b, loss)
+    print(W, b, loss)'''
+
+#x=Variable(np.array([1,2]))
+#W=Variable(np.array([1,2],[3,4]))
+a=[[1,2,3],[4,5,6]]
+y=np.sum(a,axis=1,keepdims=False)
+print(y)
