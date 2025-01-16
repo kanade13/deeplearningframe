@@ -1,9 +1,61 @@
 import numpy as np
 import os
 import argparse
-class Your_model_name():
-    def __init__(self) -> None:
-        pass
+import sys
+#将mydef文件夹加入环境变量
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from mydef import *
+from mydef import evaluate,meansquarederror,Linear,sigmoid,Variable, SGD, Model
+# 将上级目录添加到sys.path，以便可以导入config_.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import config
+class kanade(Model):
+    def __init__(self, input_size, hidden_size, output_size):
+        super().__init__()
+        #print('input_size',input_size)
+        #print('hidden_size',hidden_size)
+        self.fc1 = Linear(in_size=input_size, out_size=hidden_size)
+        self.fc2 = Linear(in_size=hidden_size, out_size=output_size)
+
+    def forward(self, x):
+        h = self.fc1(x)
+        #print('h.shape',h.shape)
+        h = sigmoid(h)
+        y = self.fc2(h)
+        print('y.shape',y.shape)
+        return y
+
+    def training(self, x, y, epochs=100, lr=0.01):
+        optimizer = SGD(lr)
+        optimizer.setup(self)
+        for epoch in range(epochs):
+            y_pred = self.forward(x)
+
+            #如果y_pred和y的shape不一样，需要对y_pred进行reshape
+            if y_pred.shape != y.shape:
+                y_pred = y_pred.reshape(y.shape)
+
+            #print('y_pred.shape',y_pred.shape)
+            #print('y.shape',y.shape)
+            loss = meansquarederror(y_pred, y)
+            print(loss)
+            loss.backward()
+            optimizer.update()
+            if epoch % 10 == 0:
+                print(f'Epoch {epoch}, Loss: {loss.data}')
+
+        # 评估模型性能
+        accuracy,precision,recall,f1_score=evaluate(y_pred, y)
+        #f1 = f1_score(y_pred, y)
+        print(f'Accuracy: {accuracy}, Recall: {recall}, Precision: {precision}, F1 Score: {f1_score}')
+
+        # 保存模型
+        #self.save_model('model_weights.npy')
+
+    def save_model(self, filename):
+        weights = [param.data for param in self.params()]
+        np.save(filename, weights)
 
 class dataset():
     def __init__(self, data_path: str):
@@ -53,8 +105,13 @@ class dataset():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='The training process')
     parser.add_argument('--data_path', default='', type=str)
+
     args = parser.parse_args()
-    data = dataset(args.data_path)
+    #print(os.getcwd())
+
+    data_path = "data/data"
+    data_path = args.data_path if args.data_path else data_path
+    data = dataset(data_path)
     training_x, training_y = data.data_collection()
     print(f'the training features of the circuits are: {training_x} with shape of {training_x.shape}')
     print(f'the training labels of the circuits are: {training_y} with shape of {training_y.shape}')
@@ -69,4 +126,10 @@ if __name__ == '__main__':
             2. the model performance (recall, precision, f1_score) on the training dataset
             3. save the final model
     '''
-
+    #print(config.Config.input_size)
+    #print(config.Config.hidden_size)
+    #print(config.Config.output_size)
+    kanade_model = kanade(config.Config.input_size, config.Config.hidden_size, config.Config.output_size)
+    kanade_model.training(Variable(training_x), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate)
+    #kanade_model.save_model(config_.Config.save_model_path)
+    print('completed!')
