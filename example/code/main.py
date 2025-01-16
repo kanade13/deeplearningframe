@@ -42,7 +42,7 @@ class kanade(Model):
         y_pred = None
         for epoch in range(epochs):
             y_pred = self.forward(x)
-
+            
             #如果y_pred和y的shape不一样，需要对y_pred进行reshape
             if y_pred.shape != y.shape:
                 y_pred = y_pred.reshape(y.shape)

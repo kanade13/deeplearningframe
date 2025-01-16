@@ -202,6 +202,7 @@ def check(l: list):
 
 class Exp(Function):
     def forward(self, x):
+        x = np.exp(x)
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
         x = self.inputs[0] 
@@ -513,6 +514,7 @@ class Sigmoid(Function):
         x = self.inputs[0].data
         o = 1 / (1+np.exp((-1) * x))
         gx = gy * o * (1-o)
+        o = None
         return gx
     
 def sigmoid(x):
@@ -550,7 +552,7 @@ class GetItemGrad(Function):
 def softmax_simple(x):
     x = as_variable(x)
     y = exp(x)
-    sum_y = sum(y)
+    sum_y = sum(y, axis = 1, keepdims = True)
     return y / sum_y
 
 class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都是一个样本,对应的输出的每一行都是一个y的概率分布
@@ -563,19 +565,44 @@ class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都
         raise NotImplementedError()
         #TODO:softmax函数求导
 
+class Soft_Cross_entropy(Function):
+    def forward(self, x, t):
+        x = sigmoid(x).data
+        y = t * np.log(x) + (1-t) * np.log(1-x)
+        return -sum(y).data
+
+    def backward(self, gy):
+        x ,t = self.inputs[0], self.inputs[1]
+        print('x:',x)
+        print('t:',t)
+        gx =  (t * 1 / (1+exp(x)) + (1-t) * 1 / (1+exp(x))) *gy
+        return gx
+
+def soft_cross_entropy(x, t):
+    return Soft_Cross_entropy()(x, t)
+
 def softmax(x):
     return SoftMax()(x)
 
 def softmax_cross_entropy_simple(x, t):
     x, t=as_variable(x), as_variable(t)
     N=x.shape[0]
-
-    p = softmax_simple(x)
-    p = np.clip(p, 1e-15, 1.0)
+    
+    #p = softmax_simple(x)
+    p = sigmoid(x)
+    
+    #p = np.clip(p.data, 1e-15, 1.0)
     log_p = log(p)
-    tlog_p = log_p[np.arange(N), t.data]
-    y = (-1) * sum(tlog_p) / N
-    return y
+    log_1p = log(1 - p)
+    #p=p.reshape(p.size,1)
+    y = t * log_p + (1 - t) * log_1p
+    
+    a=Variable(np.array(0))
+    for i in range(y.size):
+        a = a - y[i]
+    #tlog_p = log_p * []
+    #y = (-1) * sum(tlog_p) / N
+    return a
 
 class Layer:
     def __init__(self):
@@ -742,17 +769,27 @@ def accuracy(y, t):
 
 def evaluate(y, t):#计算precision,recall和f_score
     y, t = as_variable(y), as_variable(t)
+<<<<<<< HEAD
+    
+    
+    #pred = y.data.argmax(axis = 1).reshape(t.shape)
+=======
     #print('y.shape:',y.shape)
     pred = y.data
     print('pred:',pred)
     print('t:',t.data)
     #将t.data转为int类型
     t=t.data.astype(int)
+>>>>>>> f19c3d304a4fca624633d6614ecd82899e8a2ae7
     tp=0
     fp=0
     fn=0
     tn=0
+<<<<<<< HEAD
+    for i in len(y):
+=======
     for i in range(len(pred)):
+>>>>>>> f19c3d304a4fca624633d6614ecd82899e8a2ae7
         if pred[i] == t[i] and pred[i] == 1:
             tp = tp + 1
         if pred[i] == 0 and t[i] == 1:

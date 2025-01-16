@@ -5,7 +5,19 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))#将
 from mydef import *
 import matplotlib.pyplot as plt
 #from mydef import as_variable
+import utils
 
+a=Variable(np.random.uniform(-1, 1, size=(50000)).astype(np.float32))
+t=np.random.randint(0, 2, size=(50000))
+#print(a)
+#print(t)
+b=softmax_cross_entropy_simple(a,t)
+print(b)
+b.backward()
+print(a.grad)
+'''
+x=np.array([[1,2,3],[4,5,6]])
+print(x.sum(axis=0,keepdims=True))'''
 '''
 def sphere(x,y):
     return x**2+y**2
@@ -192,7 +204,7 @@ z.backward()
 print(x.grad)
 '''
 
-
+'''
 np.random.seed(0)
 x = np.random.rand(100,1)
 y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
@@ -228,7 +240,7 @@ plt.title("Data Points and Fitted Curve")
 plt.legend()
 plt.show()
 
-model.save_weights('my_mlp.npz')
+model.save_weights('my_mlp.npz')'''
 '''
 
 
