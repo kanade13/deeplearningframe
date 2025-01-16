@@ -12,7 +12,10 @@ from .mydef_ import Reshape
 from .mydef_ import BroadcastTo
 from .mydef_ import SumTo
 from .mydef_ import Sum
-from .mydef_ import MatMul,Add,MeanSquareError,Linear
-__all__ = ['Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul']
+from .mydef_ import MatMul,Add,MeanSquareError,Linear,Layer,Log,meansquarederror,Sigmoid
+from .mydef_ import GetItem,GetItemGrad,Optimizer,SGD
+from .mydef_ import MLP,TwoLayerNet
+from .mydef_ import Mul,Div,Pow,Linearf,linear_simple
+__all__ = ['linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
 
 setup_variable()#设置Variable类的属性

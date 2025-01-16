@@ -7,6 +7,7 @@ from mydef import Variable
 from mydef import MatMul
 from mydef import Exp
 from mydef import Add,Sum
+import matplotlib.pyplot as plt
 #from mydef import as_variable
 
 '''
@@ -183,9 +184,63 @@ for i in range(iters):
     W.data -= lr * W.grad.data
     b.data -= lr * b.grad.data
     print(W, b, loss)'''
-
+'''
 #x=Variable(np.array([1,2]))
 #W=Variable(np.array([1,2],[3,4]))
-a=[[1,2,3],[4,5,6]]
-y=np.sum(a,axis=1,keepdims=False)
-print(y)
+x=Variable(np.array([[1,2],[3,4]]))
+W=Variable(np.array([[1,2],[3,4]]))
+
+z=MatMul()(x,W)
+print(z)
+z.backward()
+print(x.grad)
+'''
+
+np.random.seed(0)
+x = np.random.rand(100,1)
+y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
+
+lr = 0.2
+max_iters = 10000
+hidden_size = 10
+model=MLP([hidden_size,1])
+optimizer = SGD(lr).setup(model)
+for i in range(max_iters):
+    model.cleargrads()
+    y_pred = model(x)
+    loss = MeanSquareError()(y, y_pred)
+    loss.backward()
+    optimizer.update()
+    if i % 1000 == 0:
+        print(loss)
+
+plt.figure(figsize=(8, 6))
+plt.scatter(x, y, label="Data Points", color="blue", alpha=0.6)  # 数据点
+x_fit = np.linspace(0, 1, 100).reshape(-1, 1)
+y_fit = model(x_fit)  # 拟合曲线
+
+plt.plot(x_fit.data, y_fit.data.reshape[-1], label="Fitted Curve", color="red", linewidth=2)  # 拟合曲线
+plt.xlabel("x")
+plt.ylabel("y")
+plt.title("Data Points and Fitted Curve")
+plt.legend()
+plt.show()
+'''
+
+
+
+x=Variable(np.array([[1,2]]))
+W=Variable(np.array([[1,2],[3,4]]))
+b=Variable(np.array([1,2]))
+A=Linearf()
+print(np.array([1,2]).shape)
+z=A(x,W,b)  
+print('z:',z)
+z.backward()
+print(x.grad,'\n',W.grad,'\n',b.grad)'''
+'''
+x=Variable(np.array([1,2]))
+y=Variable(np.array([3,4]))
+A=MeanSquareError()
+z=A(x,y)
+print(z)'''

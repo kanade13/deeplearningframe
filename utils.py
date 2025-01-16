@@ -5,7 +5,8 @@ import os
 import subprocess
 def sum_to(x, shape):
     """
-    求和操作，使数组 x 的形状变为目标形状 shape。
+    求和操作，使数组 x 的形状变为目标形状 shape。例如，若目标形状的某个维度为 1，
+    则对该维度进行求和；若目标形状与输入数组的某些维度不同，则对多余的维度求和。
     
     参数:
         x (np.ndarray): 输入数组。
@@ -100,6 +101,7 @@ if __name__ == '__main__':
     y=sum_to(x,(2,1))
     print(x)
     print(y)
+    print(y.shape)
     '''def goldstein(x,y):
         return (1+(x+y+1)**2*(19-14*x+3*x**2-14*y+6*x*y+3*y**2))*(30+(2*x-3*y)**2*(18-32*x+12*x**2+48*y-36*x*y+27*y**2))
     x=Variable(np.array(1.0))

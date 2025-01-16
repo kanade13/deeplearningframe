@@ -134,7 +134,7 @@ class Variable:
     
     def transpose(self):
         return transpose(self)
-    
+    @property
     def T(self):
         return transpose(self)
 
@@ -160,14 +160,18 @@ def numerical_diff(f, x, eps=1e-4):  #中心差分近似求数值微分
 
 class Function:
     def __call__(self, *inputs):
+        #print("inputs:",inputs)
         inputs=[as_variable(input) for input in inputs]
         x = [x.data for x in inputs]
+        #print("xxx:",x)
         #for input in inputs:
         y = self.forward(*x) #解包,相当于self.forward(x[0],x[1],...)
+        #print("y1:",y)
         if not isinstance(y, tuple):#如果y不是元组，将其转化为元组
             y = (y,)
+        #print("y2:",y)
         outputs=[Variable(as_array(output)) for output in y]
-
+        #print("outputs:",outputs)
         #output = Variable(y)    #numpy中对零维计算可能变为其他类型
         if Config.enable_backprop:
             self.generation = max([input.generation for input in inputs])
@@ -175,7 +179,7 @@ class Function:
                 output.set_creator(self)
             self.inputs=inputs
             self.outputs=[weakref.ref(output) for output in outputs]
-
+        #print("len(outputs):",len(outputs)) 
         return outputs if len(outputs) > 1 else outputs[0]#如果只有一个输出，直接返回元素,否则返回列表
    
     def __lt__(self, other):
@@ -212,7 +216,7 @@ def log2(base, x):#以base为底的对数
 
 class Log(Function):
     def forward(self, x):
-        return log2(2, x)
+        return np.log(x)
 
     def backward(self, gy):
         x = self.inputs[0]
@@ -226,7 +230,7 @@ class Square(Function):
     def forward(self, x):
         return x**2
     def backward(self, gy):
-        print("gy",gy)
+        #print("gy",gy)
         x = self.inputs[0] #为inputs[0],是正确的
         gx = 2*x*gy
         return gx
@@ -268,14 +272,21 @@ def rsub(x, y):
 
 class Mul(Function):
     def forward(self, x:np.ndarray, y:np.ndarray):
+        self.x_shape, self.y_shape = x.shape, y.shape
         return x * y
     def backward(self, gy:Variable):
         x, y = self.inputs[0],self.inputs[1]
+        if self.x_shape != self.y_shape:
+            gx = sum_to(y*gy, self.x_shape)
+            gy = sum_to(x*gy, self.y_shape)  
+        else:
+            gx = y * gy
+            gy = x * gy      
         #如果gy不是Variable实例,发出一个警告,并将其转化为Variable实例
         if not isinstance(gy,Variable):
             warnings.warn("gy is not a Variable instance, it will be converted to Variable instance")
             gy=Variable(gy)
-        return y * gy, x * gy
+        return gx, gy
 def mul(x, y):
     x1=as_variable(x)
     return Mul()(x1, y)#???
@@ -290,12 +301,16 @@ def neg(x):
 
 class Div(Function):
     def forward(self, x, y):
+        self.x_shape, self.y_shape = x.shape, y.shape
         return x / y
     def backward(self, gy):
         x, y = self.inputs[0],self.inputs[1]
         check([x,y,gy])
         gx = gy / y
         gy = gy * (-x / y ** 2)
+        if self.x_shape != self.y_shape:
+            gx = sum_to(gx, self.x_shape)
+            gy = sum_to(gy, self.y_shape)
         return gx,gy
 def div(x, y):
     x=as_array(x)
@@ -348,17 +363,17 @@ def transpose(x):
     return Transpose()(x)
 
 class Sum(Function):
-    def __init__(self, axis, keepdims):
+    def __init__(self, axis, keepdims=False):
         self.axis = axis
         self.keepdims = keepdims
         
-    def foward(self, x):
+    def forward(self, x):
         self.x_shape = x.shape
         y = np.sum(x, axis = self.axis, keepdims = self.keepdims)
         return y
     
     def backward(self, gy):
-        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#书中为ultis.reshape_sum_backward
+        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#TODO:ultis.reshape_sum_backward
         gx = broadcast_to(gy, self.x_shape)
         return gx
     
@@ -375,7 +390,7 @@ class BroadcastTo(Function):
         return y
     
     def backward(self, gy):
-        gx = utils.sum_to(gy, self.x_shape)#书中为ultis.sum_to
+        gx = sum_to(gy, self.x_shape)#书中为ultis.sum_to
         return gx
 def broadcast_to(x, shape):
     if x.shape == shape:
@@ -388,7 +403,7 @@ class SumTo(Function):
         
     def forward(self, x):
         self.x_shape = x.shape
-        y = np.sum_to(x, self.shape)
+        y = utils.sum_to(x, self.shape)
         return y
     
     def backward(self, gy):
@@ -412,11 +427,13 @@ class MatMul(Function):
         return gx,gW
     
 def matmul(x, W):
-    return MatMul()(x, W)
+    m=MatMul()(x, W)
+    #print("m:",m)
+    return m
 
-def MeanSquareError(Function):
+class MeanSquareError(Function):
     def forward(self, x0, x1):
-        diff = x0 - x1
+        diff = x0 - x1 
         y = (diff ** 2).sum() / len(diff)
         return y
     
@@ -438,26 +455,50 @@ def linear_simple(x, W, b=None):
     t.data=None
     return y
 
-class Linear(Function):
+class Linearf(Function):
     def forward(self, x, W, b=None):
+        #print("x:",x)
+        #print("W:",W)
         t = matmul(x, W)
-        if b == None:
-            return t
-        return t+b
+        #print('t:',t)
+        if b is None:
+            return t.data
+        return (t+b).data
     
-    def backward(self, x, W, b=None):
-        return W.T()
+    def backward(self, gy):
+        W = self.inputs[1]
+        x = self.inputs[0]
+        b = None if self.inputs[2] is None else self.inputs[2]
+        #如果b的形状是(a,),转变为(1,a)
+        if b.data is not None and b is not None:
+            print('b:',b)
+            if b.ndim == 1:
+                b = reshape(b, (1, b.size))
+        return matmul(gy,W.T) , matmul(x.T,gy), sum_to(gy, b.shape) if self.inputs[2] is not None and self.inputs[2].data is not None else None
 
 def linear(x, W, b=None):
-    return Linear()(x, W, b)
+    #print('linearf:',Linearf()(x, W, b))
+    return Linearf()(x, W, b)
 
 class Sigmoid(Function):
     def forward(self, x):
-        y = 1 / (1+np.exp(-x))
+        #print(x)    
+        y = 1 / (1+np.exp((-1) * x))
+        #print("y:",y)
         return y
     
     def backward(self, gy):
-        gx = gy * self.outputs * (1-self.outputs)
+        #print('gy',type(gy.data))
+        #print('outputs:',self.outputs,type(self.outputs))
+        #outputs = [ref() if isinstance(ref, weakref.ReferenceType) else ref for ref in self.outputs]
+        #if None in outputs:
+        #    raise ValueError("Some outputs have been garbage collected.")
+        
+        # 确保 outputs 是数值类型
+        #outputs = np.array(outputs, dtype=float)
+        x = self.inputs[0].data
+        o = 1 / (1+np.exp((-1) * x))
+        gx = gy * o * (1-o)
         return gx
     
 def sigmoid(x):
@@ -532,7 +573,7 @@ class Layer:
         super().__setattr__(name, value)
 
     def __call__(self, *inputs):
-        outputs = self.foward(*inputs)
+        outputs = self.forward(*inputs)
         if not isinstance(outputs,tuple):
             outputs = ((outputs,))
         self.inputs = [weakref.ref(input) for input in inputs]
@@ -543,7 +584,7 @@ class Layer:
         raise NotImplementedError()
 
     def params(self):
-        for name in self.params:
+        for name in self._params:
             obj = self.__dict__[name]
 
             if isinstance(obj, Layer):
@@ -554,8 +595,11 @@ class Layer:
     def cleargrads(self):
         for param in self.params():
             param.cleargrad()
-
-class TwoLayerNet(Layer):
+class Model(Layer):
+    def plot(self, *inputs, to_file="model.png"):
+        y = self.forward(*inputs)
+        return utils.plot_dot_graph(y, verbose=True, to_file=to_file)
+class TwoLayerNet(Model):
     def __init__(self, hidden_size, out_size):
         super().__init__()
         self.l1 = Linear(hidden_size)
@@ -566,9 +610,9 @@ class TwoLayerNet(Layer):
         y = self.l2(y)
         return y
 
-class MLP(Layer):
+class MLP(Model):
     def __init__(self, fc_output_sizes, activation=sigmoid):
-        super()._init__()
+        super().__init__()
         self.activation = activation
         self.layers = []
 
@@ -585,7 +629,7 @@ class MLP(Layer):
 
 
 class Linear(Layer):
-    def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
+    def __init__(self, out_size, nobias=True, dtype=np.float32, in_size=None):
         super().__init__()
         self.in_size = in_size
         self.out_size = out_size
@@ -597,7 +641,8 @@ class Linear(Layer):
 
         if nobias:
             self.b = None
-        self.b = Parameter(np.zeros(0, dtype=dtype), name = 'b')
+        else:
+            self.b = Parameter(np.zeros(0, dtype=dtype), name = 'b')
 
     def __init__W(self):
         I, O = self.in_size, self.out_size
@@ -605,7 +650,7 @@ class Linear(Layer):
         self.W.data = W_data
 
     def forward(self, x):
-        if self.W.data is not None:
+        if self.W.data is None:
             self.in_size = x.shape[1]
             self.__init__W()
 
@@ -622,7 +667,7 @@ class Optimizer:
         return self
 
     def update(self):
-        params = [p for p in self.target.params if p.grad is not None]
+        params = [p for p in self.target.params() if p.grad is not None]
 
         #预处理(可选)
         #for f in self.hooks:
@@ -634,7 +679,7 @@ class Optimizer:
     def update_one(self, params):
         raise NotImplementedError()
 
-def SGD(Optimizer):
+class SGD(Optimizer):
     def __init__(self, lr=0.01):
         super().__init__()
         self.lr = lr
