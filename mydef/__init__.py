@@ -16,7 +16,8 @@ from .mydef_ import MatMul,Add,MeanSquareError,Linear,Layer,Log,meansquarederror
 from .mydef_ import GetItem,GetItemGrad,Optimizer,SGD
 from .mydef_ import MLP,TwoLayerNet
 from .mydef_ import Mul,Div,Pow,Linearf,linear_simple,softmax_cross_entropy_simple
-from .mydef_ import evaluate,Model,sigmoid,softmax_simple,soft_cross_entropy
-__all__ = ['soft_cross_entropy','softmax_simple','sigmoid','Model','evaluate','softmax_cross_entropy_simple','linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
+from .mydef_ import evaluate,Model,sigmoid
+from .mydef_ import weighting_mean_square_error
+__all__ = ['weighting_mean_square_error','sigmoid','Model','evaluate','softmax_cross_entropy_simple','linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
 
 setup_variable()#设置Variable类的属性
