@@ -202,7 +202,6 @@ def check(l: list):
 
 class Exp(Function):
     def forward(self, x):
-        x = np.exp(x)
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
         x = self.inputs[0] 
@@ -448,20 +447,6 @@ class MeanSquareError(Function):
 def meansquarederror(x0 ,x1):
     return MeanSquareError()(x0, x1)
 
-class weighting_mean_square_error(Function):
-    def forward(self, x0, x1, w):
-        diff = x0 - x1
-        y = (w * diff ** 2).sum() / len(diff)
-        return y
-    
-    def backward(self, gy):
-        x0, x1, w = self.inputs
-        diff = x0 - x1
-        gx0 = gy * w * diff * (2. / len(diff))
-        gx1 = -gx0
-        return gx0, gx1
-
-
 def linear_simple(x, W, b=None):
     t = matmul(x, W)
     if b is None:
@@ -478,7 +463,7 @@ class Linearf(Function):
         #print('t:',t)
         if b is None:
             return t.data
-        return (t.data+b.data)
+        return (t+b).data
     
     def backward(self, gy):
         W = self.inputs[1]
@@ -700,7 +685,7 @@ class MLP(Model):
 
 
 class Linear(Layer):
-    def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
+    def __init__(self, out_size, nobias=True, dtype=np.float32, in_size=None):
         super().__init__()
         self.in_size = in_size
         self.out_size = out_size
@@ -713,7 +698,7 @@ class Linear(Layer):
         if nobias:
             self.b = None
         else:
-            self.b = Parameter(np.zeros(out_size, dtype=dtype), name = 'b')
+            self.b = Parameter(np.zeros(0, dtype=dtype), name = 'b')
 
     def __init__W(self):
         I, O = self.in_size, self.out_size
@@ -757,7 +742,7 @@ class SGD(Optimizer):
         self.lr = lr
 
     def update_one(self, param):
-        param.data -= self.lr * param.grad.data.reshape(param.data.shape)
+        param.data -= self.lr * param.grad.data
     
 def accuracy(y, t):
     y, t = as_variable(y), as_variable(t)
@@ -769,27 +754,14 @@ def accuracy(y, t):
 
 def evaluate(y, t):#计算precision,recall和f_score
     y, t = as_variable(y), as_variable(t)
-<<<<<<< HEAD
     
     
     #pred = y.data.argmax(axis = 1).reshape(t.shape)
-=======
-    #print('y.shape:',y.shape)
-    pred = y.data
-    print('pred:',pred)
-    print('t:',t.data)
-    #将t.data转为int类型
-    t=t.data.astype(int)
->>>>>>> f19c3d304a4fca624633d6614ecd82899e8a2ae7
     tp=0
     fp=0
     fn=0
     tn=0
-<<<<<<< HEAD
     for i in len(y):
-=======
-    for i in range(len(pred)):
->>>>>>> f19c3d304a4fca624633d6614ecd82899e8a2ae7
         if pred[i] == t[i] and pred[i] == 1:
             tp = tp + 1
         if pred[i] == 0 and t[i] == 1:
@@ -798,10 +770,6 @@ def evaluate(y, t):#计算precision,recall和f_score
             fp = fp + 1
         if pred[i] == 0 and t[i] == 0:
             tn = tn + 1
-    print('tp:',tp)
-    print('fp:',fp)
-    print('fn:',fn)
-    print('tn:',tn)
     accuracy=(tp+tn)/(tp+fn+fp+tn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
