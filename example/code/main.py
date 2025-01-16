@@ -21,7 +21,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-from imblearn.over_sampling import SMOTE  # 用于过采样
+
 from sklearn.metrics import precision_score, recall_score
 
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -226,66 +226,80 @@ if __name__ == '__main__':
     #print(training_x.shape)
     #print(training_y.shape)
 
-
-# 假设你有一个数据集 X (形状: [样本数, 特征数]) 和 y (形状: [样本数])
-# 这里用 make_classification 创建一个示例数据集
-X, y = training_x, training_y
-print(X.shape,y.shape)
-
-# 数据标准化
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
-
-# 使用SMOTE过采样处理类别不平衡
-smote = SMOTE(sampling_strategy=1.0, random_state=42)
-X_resampled, y_resampled = smote.fit_resample(X, y)
-
-# 将数据划分为训练集和测试集
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
-
-# 转换为 PyTorch 张量
-X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-#y_train_tensor = torch.tensor(y_train, dtype=torch.long)
-X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-#y_test_tensor = torch.tensor(y_test, dtype=torch.long)
-y_train_tensor = torch.tensor(y_train, dtype=torch.float32).view(-1, 1)  # 转为浮点型
-y_test_tensor = torch.tensor(y_test, dtype=torch.float32).view(-1, 1)    # 转为浮点型
-
-
-# 创建 DataLoader
-train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-
-# 定义神经网络结构
 # 定义神经网络结构
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
-from imblearn.over_sampling import SMOTE  # 用于过采样
 
 # 假设你有一个数据集 X (形状: [样本数, 特征数]) 和 y (形状: [样本数])
 # 这里用 make_classification 创建一个示例数据集
 X, y = make_classification(n_samples=1000, n_features=69, n_informative=30, n_classes=2, 
                             weights=[0.9, 0.1], flip_y=0, random_state=42)
 
-# 数据标准化
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
+# 假设 X 是数据集，y 是标签
+# 计算每个特征的均值和标准差
+mean = np.mean(X, axis=0)  # 对每一列计算均值
+std = np.std(X, axis=0)    # 对每一列计算标准差
 
-# 使用SMOTE过采样处理类别不平衡
-smote = SMOTE(sampling_strategy='auto', random_state=42)
-X_resampled, y_resampled = smote.fit_resample(X, y)
+# 手动标准化数据
+X_standardized = (X - mean) / std
 
-# 将数据划分为训练集和测试集
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+# 计算每个类别的样本数量
+class_0_count = np.sum(y == 0)
+class_1_count = np.sum(y == 1)
+
+# 确定我们要增加的少数类样本数量
+# 这里我们使用复制的方式简单地进行过采样
+if class_0_count > class_1_count:
+    # 少数类是 1，复制少数类样本
+    minority_class_samples = X[y == 1]
+    minority_class_labels = y[y == 1]
+    num_samples_to_generate = class_0_count - class_1_count
+else:
+    # 少数类是 0，复制少数类样本
+    minority_class_samples = X[y == 0]
+    minority_class_labels = y[y == 0]
+    num_samples_to_generate = class_1_count - class_0_count
+
+# 随机复制少数类样本来增加样本数量
+additional_samples = minority_class_samples[np.random.choice(minority_class_samples.shape[0], num_samples_to_generate, replace=True)]
+additional_labels = minority_class_labels[np.random.choice(minority_class_labels.shape[0], num_samples_to_generate, replace=True)]
+
+# 组合过采样后的数据
+X_resampled = np.concatenate([X, additional_samples], axis=0)
+y_resampled = np.concatenate([y, additional_labels], axis=0)
+
+
+
+# 假设 X_resampled 是特征数据，y_resampled 是标签数据
+# 设置随机种子（用于控制结果的可重复性）
+random_state = 42
+np.random.seed(random_state)
+
+# 获取数据集的大小
+num_samples = X_resampled.shape[0]
+
+# 生成一个随机排列的索引
+indices = np.random.permutation(num_samples)
+
+# 划分训练集和测试集的样本数量
+test_size = 0.2
+test_samples = int(num_samples * test_size)
+train_samples = num_samples - test_samples
+
+# 根据随机索引分割数据集
+train_indices = indices[:train_samples]
+test_indices = indices[train_samples:]
+
+X_train = X_resampled[train_indices]
+y_train = y_resampled[train_indices]
+X_test = X_resampled[test_indices]
+y_test = y_resampled[test_indices]
+
+
 
 # 转换为 PyTorch 张量
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
