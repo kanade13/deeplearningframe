@@ -230,8 +230,6 @@ if __name__ == '__main__':
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
@@ -241,9 +239,13 @@ import numpy as np
 X, y = make_classification(n_samples=1000, n_features=69, n_informative=30, n_classes=2, 
                             weights=[0.9, 0.1], flip_y=0, random_state=42)
 
-# 数据标准化
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
+# 假设 X 是数据集，y 是标签
+# 计算每个特征的均值和标准差
+mean = np.mean(X, axis=0)  # 对每一列计算均值
+std = np.std(X, axis=0)    # 对每一列计算标准差
+
+# 手动标准化数据
+X_standardized = (X - mean) / std
 
 # 计算每个类别的样本数量
 class_0_count = np.sum(y == 0)
@@ -270,8 +272,34 @@ additional_labels = minority_class_labels[np.random.choice(minority_class_labels
 X_resampled = np.concatenate([X, additional_samples], axis=0)
 y_resampled = np.concatenate([y, additional_labels], axis=0)
 
-# 将数据划分为训练集和测试集
-X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+
+
+# 假设 X_resampled 是特征数据，y_resampled 是标签数据
+# 设置随机种子（用于控制结果的可重复性）
+random_state = 42
+np.random.seed(random_state)
+
+# 获取数据集的大小
+num_samples = X_resampled.shape[0]
+
+# 生成一个随机排列的索引
+indices = np.random.permutation(num_samples)
+
+# 划分训练集和测试集的样本数量
+test_size = 0.2
+test_samples = int(num_samples * test_size)
+train_samples = num_samples - test_samples
+
+# 根据随机索引分割数据集
+train_indices = indices[:train_samples]
+test_indices = indices[train_samples:]
+
+X_train = X_resampled[train_indices]
+y_train = y_resampled[train_indices]
+X_test = X_resampled[test_indices]
+y_test = y_resampled[test_indices]
+
+
 
 # 转换为 PyTorch 张量
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
