@@ -1,6 +1,8 @@
 import numpy as np
-import os
+import os,sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import argparse
+from mydef import *
 class Your_model_name():
     def __init__(self) -> None:
         pass
@@ -59,6 +61,20 @@ if __name__ == '__main__':
     print(f'the training features of the circuits are: {training_x} with shape of {training_x.shape}')
     print(f'the training labels of the circuits are: {training_y} with shape of {training_y.shape}')
     # your implementation
+    lr = 0.2
+    max_iters = 10000
+    hidden_size = 10
+    model = MLP([hidden_size, hidden_size ,2])
+    optimizer = SGD(lr).setup(model)
+    for i in range(max_iters):
+        y_predict = model(training_x)
+        loss = meansquarederror(training_y, y_predict)
+        loss.backward()
+        optimizer.update()
+        if i%1000 == 0:
+            print(loss)
+
+
     '''
         After collecting the training dataset, you have to train your classificaiton model
         for example:

@@ -3,10 +3,6 @@ import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))#将mydef文件夹加入环境变量
 #sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from mydef import *
-from mydef import Variable
-from mydef import MatMul
-from mydef import Exp
-from mydef import Add,Sum
 import matplotlib.pyplot as plt
 #from mydef import as_variable
 
@@ -196,6 +192,7 @@ z.backward()
 print(x.grad)
 '''
 
+
 np.random.seed(0)
 x = np.random.rand(100,1)
 y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
@@ -203,8 +200,12 @@ y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
 lr = 0.2
 max_iters = 10000
 hidden_size = 10
-model=MLP([hidden_size,1])
+model=MLP([hidden_size,hidden_size,hidden_size,1])
 optimizer = SGD(lr).setup(model)
+
+if os.path.exists('my_mlp.npz'):
+    model.load_weights('my_mlp.npz')
+
 for i in range(max_iters):
     model.cleargrads()
     y_pred = model(x)
@@ -218,13 +219,15 @@ plt.figure(figsize=(8, 6))
 plt.scatter(x, y, label="Data Points", color="blue", alpha=0.6)  # 数据点
 x_fit = np.linspace(0, 1, 100).reshape(-1, 1)
 y_fit = model(x_fit)  # 拟合曲线
-print(type(y_fit))
+
 plt.plot(x_fit, y_fit.data.reshape(-1), label="Fitted Curve", color="red", linewidth=2)  # 拟合曲线
 plt.xlabel("x")
 plt.ylabel("y")
 plt.title("Data Points and Fitted Curve")
 plt.legend()
 plt.show()
+
+model.save_weights('my_mlp.npz')
 '''
 
 
