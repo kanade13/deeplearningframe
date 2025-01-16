@@ -685,7 +685,7 @@ class MLP(Model):
 
 
 class Linear(Layer):
-    def __init__(self, out_size, nobias=True, dtype=np.float32, in_size=None):
+    def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
         super().__init__()
         self.in_size = in_size
         self.out_size = out_size
@@ -698,7 +698,7 @@ class Linear(Layer):
         if nobias:
             self.b = None
         else:
-            self.b = Parameter(np.zeros(0, dtype=dtype), name = 'b')
+            self.b = Parameter(np.ones((1,self.out_size), dtype=dtype), name = 'b')
 
     def __init__W(self):
         I, O = self.in_size, self.out_size
@@ -755,13 +755,16 @@ def accuracy(y, t):
 def evaluate(y, t):#计算precision,recall和f_score
     y, t = as_variable(y), as_variable(t)
     
-    
+    pred = y.data
+    t = t.data.astype(int)
     #pred = y.data.argmax(axis = 1).reshape(t.shape)
     tp=0
     fp=0
     fn=0
     tn=0
-    for i in len(y):
+    for i in range(len(y)):
+        #print('pred:',pred[i])
+        #print('t:',t[i])
         if pred[i] == t[i] and pred[i] == 1:
             tp = tp + 1
         if pred[i] == 0 and t[i] == 1:
@@ -770,11 +773,138 @@ def evaluate(y, t):#计算precision,recall和f_score
             fp = fp + 1
         if pred[i] == 0 and t[i] == 0:
             tn = tn + 1
+    print("tp=",tp)
+    print("fp=",fp)
+    print("tn=",tn)
+    print("fn=",fn)
     accuracy=(tp+tn)/(tp+fn+fp+tn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
     f_score = 1 / (1 / precision + 1 / recall)
     return accuracy,precision, recall, f_score
+
+def characteristic(X, threshold = 0.1):
+    # 计算每个特征的方差
+    variances = np.var(X.data, axis=0)
+
+    # 设置方差阈值，低于此阈值的特征将被删除
+    #threshold = 0.1
+    selected_features = variances > threshold
+
+    # 筛选特征
+    X_selected = X.data[:, selected_features]
+
+    return Variable(X_selected)
+
+def copypositive(x, y):
+    positive_indices = np.where(y.data.astype(int) == 1)[0]
+    n_samples_to_add = len(y) - len(positive_indices)  # 需要增加的正样本数量
+    new_positive_indices = np.random.choice(positive_indices, n_samples_to_add, replace=True)
+
+    xd = x.data
+    yd = y.data
+        # 扩展正样本和标签
+    X_resampled = np.vstack((xd, xd[new_positive_indices]))
+    y_resampled = np.hstack((yd, yd[new_positive_indices]))
+
+    x = Variable(X_resampled)
+    y = Variable(y_resampled)
+
+    return x,y
+
+def correlation(X):
+        # 计算相关性矩阵
+    correlation_matrix = np.corrcoef(X.T)  # 计算特征之间的相关性
+
+    # 设置相关性阈值，去除相关性较高的特征
+    threshold = 0.9
+    selected_features = np.ones(X.shape[1], dtype=bool)
+
+    for i in range(X.shape[1]):
+        for j in range(i+1, X.shape[1]):
+            if abs(correlation_matrix[i, j]) > threshold:
+                if selected_features[i]:
+                    selected_features[j] = False
+
+    # 筛选特征
+    X_selected = X[:, selected_features]
+
+    #print(f"选择的特征索引: {np.where(selected_features)[0]}")
+    return X_selected
+
+def calculate_vif(X):
+    vif = []
+    X_with_intercept = np.c_[np.ones(X.shape[0]), X]  # 增加一列常数项，用于计算截距
+    for i in range(X.shape[1]):
+        X_other = np.delete(X_with_intercept, i+1, axis=1)  # 删除目标特征，计算其他特征
+        y = X_with_intercept[:, i+1]  # 当前特征作为目标
+        # 计算该特征的VIF（即拟合回归模型的R²值）
+        beta = np.linalg.inv(X_other.T @ X_other) @ X_other.T @ y  # 求解最小二乘解
+        residuals = y - X_other @ beta  # 残差
+        r2 = 1 - (np.sum(residuals**2) / np.sum((y - np.mean(y))**2))  # 计算R²
+        vif.append(1 / (1 - r2))  # VIF = 1 / (1 - R²)
+    return np.array(vif)
+
+def VIF(X):
+    # 计算每个特征的VIF
+    vif = calculate_vif(X)
+
+    # 设置VIF阈值，去除VIF大于阈值的特征
+    threshold = 10
+    selected_features = vif < threshold
+
+    # 筛选特征
+    X_selected = X[:, selected_features]
+
+    return X_selected
+
+def PCA(X):
+
+    # 假设 X 是原始数据，行表示样本，列表示特征  # 100个样本，5个特征
+
+    # 1. 标准化数据
+    mean = np.mean(X, axis=0)
+    std = np.std(X, axis=0)
+    X_standardized = (X - mean) / std
+
+    # 2. 计算协方差矩阵
+    cov_matrix = np.cov(X_standardized.T)
+
+    # 3. 计算特征值和特征向量
+    eigvals, eigvecs = np.linalg.eig(cov_matrix)
+
+    # 4. 按特征值排序
+    sorted_indices = np.argsort(eigvals)[::-1]
+    eigvals_sorted = eigvals[sorted_indices]
+    eigvecs_sorted = eigvecs[:, sorted_indices]
+
+    # 5. 计算累计方差贡献率
+    explained_variance = eigvals_sorted / np.sum(eigvals_sorted)
+    cumulative_variance = np.cumsum(explained_variance)
+
+    # 6. 选择足够的主成分使累计方差贡献率达到90%
+    threshold = 0.90
+    k = np.argmax(cumulative_variance >= threshold) + 1
+
+    # 7. 选择前 k 个主成分
+    selected_eigvecs = eigvecs_sorted[:, :k]
+
+    # 8. 投影数据到前 k 个主成分
+    X_pca = X_standardized.dot(selected_eigvecs)
+
+    return X_pca
+
+class ReLU(Function):
+    def forward(self, x):
+        y = np.maximum(x, 0.0)
+        return y
+    def backward(self, gy):
+        x, = self.inputs
+        mask = x.data > 0
+        gx = gy * mask
+        return gx
+def relu(x):
+    return ReLU()(x)
 
 def setup_variable():
     Variable.__add__ = add

@@ -14,10 +14,10 @@ from .mydef_ import SumTo
 from .mydef_ import Sum
 from .mydef_ import MatMul,Add,MeanSquareError,Linear,Layer,Log,meansquarederror,Sigmoid
 from .mydef_ import GetItem,GetItemGrad,Optimizer,SGD
-from .mydef_ import MLP,TwoLayerNet
+from .mydef_ import MLP,TwoLayerNet,VIF,PCA
 from .mydef_ import Mul,Div,Pow,Linearf,linear_simple,softmax_cross_entropy_simple
-from .mydef_ import evaluate,Model,sigmoid
-from .mydef_ import weighting_mean_square_error
-__all__ = ['weighting_mean_square_error','sigmoid','Model','evaluate','softmax_cross_entropy_simple','linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
-
+from .mydef_ import evaluate,Model,sigmoid,characteristic,copypositive,correlation
+#from .mydef_ import weighting_mean_square_error
+__all__ = ['PCA','VIF','correlation','copypositive','characteristic','sigmoid','Model','evaluate','softmax_cross_entropy_simple','linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
+'weighting_mean_square_error'
 setup_variable()#设置Variable类的属性

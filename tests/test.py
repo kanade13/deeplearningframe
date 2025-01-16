@@ -7,6 +7,13 @@ import matplotlib.pyplot as plt
 #from mydef import as_variable
 import utils
 
+a=Variable(np.array([[1,2,3]]))
+b=Variable(np.array([1,2]))
+W=Variable(np.array([[1,2],[4,5],[3,6]]))
+z=Linearf()(a,W,b)
+z.backward()
+print(b.grad)
+'''
 a=Variable(np.random.uniform(-1, 1, size=(50000)).astype(np.float32))
 t=np.random.randint(0, 2, size=(50000))
 #print(a)
@@ -14,7 +21,7 @@ t=np.random.randint(0, 2, size=(50000))
 b=softmax_cross_entropy_simple(a,t)
 print(b)
 b.backward()
-print(a.grad)
+print(a.grad)'''
 '''
 x=np.array([[1,2,3],[4,5,6]])
 print(x.sum(axis=0,keepdims=True))'''
