@@ -3,6 +3,29 @@ from mydef import *
 import numpy as np
 import os
 import subprocess
+
+def reshape_sum_backward(gy, x_shape, axis, keepdims):
+    # 如果 keepdims 为 True，gy 需要与 x 的形状在 sum 操作时的维度保持一致
+    if keepdims:
+        # 直接返回，因为形状已经匹配
+        return gy
+    else:
+        if axis is None:
+            # 如果 gy 是标量，调整为 x 的形状
+            return np.broadcast_to(gy, x_shape)  # 将 gy 形状调整为 x 的形状
+        # 如果 keepdims 为 False，gy 会少一些维度，需要在 axis 上进行广播
+        # 计算需要广播的维度
+        gy_shape = list(gy.shape)
+        x_shape = list(x_shape)
+        
+        # 遍历 x_shape 和 gy_shape，扩展 gy 的形状
+        for i, ax in enumerate(axis):
+            gy_shape.insert(ax, 1)  # 在 axis 维度插入 1，使其可以广播
+        
+        # 将 gy 调整为与 x_shape 一致的形状
+        return gy.reshape(gy_shape).broadcast_to(x_shape)
+
+
 def sum_to(x, shape):
     """
     求和操作，使数组 x 的形状变为目标形状 shape。例如，若目标形状的某个维度为 1，

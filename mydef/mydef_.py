@@ -202,6 +202,7 @@ def check(l: list):
 
 class Exp(Function):
     def forward(self, x):
+        x = np.exp(x)
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
         x = self.inputs[0] 
@@ -471,7 +472,7 @@ class Linearf(Function):
         b = None if self.inputs[2] is None else self.inputs[2]
         #如果b的形状是(a,),转变为(1,a)
         if b.data is not None and b is not None:
-            print('b:',b)
+            #print('b:',b)
             if b.ndim == 1:
                 b = reshape(b, (1, b.size))
         return matmul(gy,W.T) , matmul(x.T,gy), sum_to(gy, b.shape) if self.inputs[2] is not None and self.inputs[2].data is not None else None
@@ -499,6 +500,7 @@ class Sigmoid(Function):
         x = self.inputs[0].data
         o = 1 / (1+np.exp((-1) * x))
         gx = gy * o * (1-o)
+        o = None
         return gx
     
 def sigmoid(x):
@@ -536,7 +538,7 @@ class GetItemGrad(Function):
 def softmax_simple(x):
     x = as_variable(x)
     y = exp(x)
-    sum_y = sum(y)
+    sum_y = sum(y, axis = 1, keepdims = True)
     return y / sum_y
 
 class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都是一个样本,对应的输出的每一行都是一个y的概率分布
@@ -549,19 +551,44 @@ class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都
         raise NotImplementedError()
         #TODO:softmax函数求导
 
+class Soft_Cross_entropy(Function):
+    def forward(self, x, t):
+        x = sigmoid(x).data
+        y = t * np.log(x) + (1-t) * np.log(1-x)
+        return -sum(y).data
+
+    def backward(self, gy):
+        x ,t = self.inputs[0], self.inputs[1]
+        print('x:',x)
+        print('t:',t)
+        gx =  (t * 1 / (1+exp(x)) + (1-t) * 1 / (1+exp(x))) *gy
+        return gx
+
+def soft_cross_entropy(x, t):
+    return Soft_Cross_entropy()(x, t)
+
 def softmax(x):
     return SoftMax()(x)
 
 def softmax_cross_entropy_simple(x, t):
     x, t=as_variable(x), as_variable(t)
     N=x.shape[0]
-
-    p = softmax_simple(x)
-    p = np.clip(p, 1e-15, 1.0)
+    
+    #p = softmax_simple(x)
+    p = sigmoid(x)
+    
+    #p = np.clip(p.data, 1e-15, 1.0)
     log_p = log(p)
-    tlog_p = log_p[np.arange(N), t.data]
-    y = (-1) * sum(tlog_p) / N
-    return y
+    log_1p = log(1 - p)
+    #p=p.reshape(p.size,1)
+    y = t * log_p + (1 - t) * log_1p
+    
+    a=Variable(np.array(0))
+    for i in range(y.size):
+        a = a - y[i]
+    #tlog_p = log_p * []
+    #y = (-1) * sum(tlog_p) / N
+    return a
 
 class Layer:
     def __init__(self):
@@ -678,7 +705,7 @@ class Linear(Layer):
         I, O = self.in_size, self.out_size
         W_data = np.random.randn(I, O).astype(self.dtype) * np.sqrt(1 / I)
         self.W.data = W_data
-        print('w.shape',self.W.data.shape)
+        #print('w.shape',self.W.data.shape)
 
     def forward(self, x):
         if self.W.data is None:
@@ -699,7 +726,7 @@ class Optimizer:
 
     def update(self):
         params = [p for p in self.target.params() if p.grad is not None]
-        print('params:',params)
+        #print('params:',params)
         #预处理(可选)
         #for f in self.hooks:
         #    f(params)
@@ -728,13 +755,14 @@ def accuracy(y, t):
 
 def evaluate(y, t):#计算precision,recall和f_score
     y, t = as_variable(y), as_variable(t)
-
-    pred = y.data.argmax(axis = 1).reshape(t.shape)
+    
+    
+    #pred = y.data.argmax(axis = 1).reshape(t.shape)
     tp=0
     fp=0
     fn=0
     tn=0
-    for i in len(pred):
+    for i in len(y):
         if pred[i] == t[i] and pred[i] == 1:
             tp = tp + 1
         if pred[i] == 0 and t[i] == 1:

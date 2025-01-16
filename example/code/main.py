@@ -25,7 +25,7 @@ class kanade(Model):
         #print('h.shape',h.shape)
         h = sigmoid(h)
         y = self.fc2(h)
-        print('y.shape',y.shape)
+        #print('y.shape',y.shape)
         return y
 
     def training(self, x, y, epochs=100, lr=0.01):
@@ -34,14 +34,12 @@ class kanade(Model):
         losses = []
         for epoch in range(epochs):
             y_pred = self.forward(x)
-
+            
             #如果y_pred和y的shape不一样，需要对y_pred进行reshape
             if y_pred.shape != y.shape:
                 y_pred = y_pred.reshape(y.shape)
 
-            #print('y_pred.shape',y_pred.shape)
-            #print('y.shape',y.shape)
-            loss = meansquarederror(y_pred, y)
+            loss = softmax_cross_entropy_simple(y_pred, y)
             print(loss)
             loss.backward()
             optimizer.update()

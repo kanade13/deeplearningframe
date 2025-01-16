@@ -3,7 +3,7 @@ class Config:
     hidden_size = 64  # 隐藏层大小
     output_size = 1   # 输出层大小（对于二分类任务）
     learning_rate = 0.01  # 学习率
-    num_epochs = 1000  # 训练轮数
+    num_epochs = 10  # 训练轮数
     batch_size = 32   # 批次大小
 
     # 数据相关参数
