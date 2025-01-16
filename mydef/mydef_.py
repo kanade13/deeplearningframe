@@ -678,6 +678,7 @@ class Linear(Layer):
         I, O = self.in_size, self.out_size
         W_data = np.random.randn(I, O).astype(self.dtype) * np.sqrt(1 / I)
         self.W.data = W_data
+        print('w.shape',self.W.data.shape)
 
     def forward(self, x):
         if self.W.data is None:
@@ -698,7 +699,7 @@ class Optimizer:
 
     def update(self):
         params = [p for p in self.target.params() if p.grad is not None]
-
+        print('params:',params)
         #预处理(可选)
         #for f in self.hooks:
         #    f(params)
@@ -706,7 +707,7 @@ class Optimizer:
         for param in params:
             self.update_one(param)
 
-    def update_one(self, params):
+    def update_one(self, param):
         raise NotImplementedError()
 
 class SGD(Optimizer):
@@ -725,13 +726,14 @@ def accuracy(y, t):
     acc = result.mean()
     return Variable(as_array(acc))
 
-def recall(y, t):#计算precision,recall和f_score
+def evaluate(y, t):#计算precision,recall和f_score
     y, t = as_variable(y), as_variable(t)
 
     pred = y.data.argmax(axis = 1).reshape(t.shape)
     tp=0
     fp=0
     fn=0
+    tn=0
     for i in len(pred):
         if pred[i] == t[i] and pred[i] == 1:
             tp = tp + 1
@@ -739,10 +741,13 @@ def recall(y, t):#计算precision,recall和f_score
             fn = fn + 1
         if pred[i] == 1 and t[i] == 0:
             fp = fp + 1
+        if pred[i] == 0 and t[i] == 0:
+            tn = tn + 1
+    accuracy=(tp+tn)/(tp+fn+fp+tn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
     f_score = 1 / (1 / precision + 1 / recall)
-    return precision, recall, f_score
+    return accuracy,precision, recall, f_score
 
 def setup_variable():
     Variable.__add__ = add
