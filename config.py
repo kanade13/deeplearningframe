@@ -8,7 +8,7 @@ class Config:
     batch_size = 32   # 批次大小
 
     # 数据相关参数
-    input_size = 12   # 输入特征的维度
+    input_size = 69   # 输入特征的维度
     normalization = True  # 是否进行归一化
 
     # 其他配置

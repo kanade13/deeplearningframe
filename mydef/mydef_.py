@@ -202,6 +202,7 @@ def check(l: list):
 
 class Exp(Function):
     def forward(self, x):
+        x = x - np.max(x)
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
         x = self.inputs[0] 
@@ -483,6 +484,7 @@ def linear(x, W, b=None):
 class Sigmoid(Function):
     def forward(self, x):
         #print(x)    
+        x = np.clip(x, -50, 50)
         y = 1 / (1+np.exp((-1) * x))
         #print("y:",y)
         return y
@@ -497,6 +499,7 @@ class Sigmoid(Function):
         # 确保 outputs 是数值类型
         #outputs = np.array(outputs, dtype=float)
         x = self.inputs[0].data
+        x = np.clip(x, -50, 50)
         o = 1 / (1+np.exp((-1) * x))
         gx = gy * o * (1-o)
         o = None
@@ -542,6 +545,7 @@ def softmax_simple(x):
 
 class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都是一个样本,对应的输出的每一行都是一个y的概率分布
     def forward(self, x, axis = 1):
+        x = x - np.max(x)
         y = exp(x)
         sum_y = sum(y, axis = axis, keepdims = True)
         return y / sum_y
@@ -552,15 +556,15 @@ class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都
 
 class Soft_Cross_entropy(Function):
     def forward(self, x, t):
+        x = np.clip(x, -50, 50)
         x = 1 / (1 + np.exp(-x))
+        x = np.clip(x, 1e-15, 1-(1e-15))
         y = t * np.log(x) + (1-t) * np.log(1-x)
         return -sum(y).data
 
     def backward(self, gy):
         x ,t = self.inputs[0], self.inputs[1]
-        print('x:',x)
-        print('t:',t)
-        gx =  (t * 1 / (1+exp(x)) + (1-t) * 1 / (1+exp(x))) *gy
+        gx =  (-t * 1 / (1+exp(x)) + (1-t) * 1 / (1+exp(-x))) *gy
         return gx
 
 def soft_cross_entropy(x, t):
@@ -921,11 +925,11 @@ def test_mode():
 
 def dropout(x, dropout_ratio=0.5):
     x = as_variable(x)
-    if dezero.Config.train:
-        xp = cuda.get_array_module(x)
-        mask = xp.random.rand(*x.shape) > dropout_ratios
+    if Config.train:
+        xp = x#cuda.get_array_module(x)
+        mask = np.random.rand(*x.shape) > dropout_ratio
         
-        scale= xp.array(1.0 - dropout_ratio).astype(x.dtype)
+        scale= np.array(1.0 - dropout_ratio).astype(x.dtype)
         y = x * mask / scale
         return y
     else:

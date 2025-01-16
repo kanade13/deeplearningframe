@@ -27,7 +27,10 @@ from sklearn.metrics import precision_score, recall_score
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
-'''class kanade(Model):
+from mydef import *
+import config
+
+class kanade(Model):
     def __init__(self, input_size, hidden_size1,hidden_size2, output_size):
         super().__init__()
         #print('input_size',input_size)
@@ -54,7 +57,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
         x_0 = x
         y_0 = y
 
-        x = Variable(PCA(x.data))
+        
 
         print(x.shape)
 
@@ -67,7 +70,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
                 y_pred = y_pred.reshape(y.shape)
             #print('y_pred.shape',y_pred.shape)
             #print('y.shape',y.shape)
-            loss = meansquarederror(y_pred, y)
+            loss = soft_cross_entropy(y_pred, y)
             #loss=weighting_mean_square_error()(y_pred,y,w)
             loss.backward()
             optimizer.update()
@@ -77,29 +80,30 @@ os.environ["MKL_NUM_THREADS"] = "1"
                 optimizer.lr=lr
             print(f'Epoch {epoch}, Loss: {loss.data}')
         #对y_pred排序
-        sorted_pred = np.sort(y_pred.data)[::-1]
+        '''sorted_pred = np.sort(y_pred.data)[::-1]
         s=sorted_pred[6257]
         print('s:',s)
         for i in range(6250,6300):
-            print(sorted_pred[i])
+            print(sorted_pred[i])'''
         
         y_pred = self.forward(x)
         print(y_pred)
         y_pred.data = np.where(y_pred.data > -0.5, 1, 0)
-        #print(y_pred.data)
+        print(y_pred.data)
 
         # 评估模型性能
         accuracy,precision,recall,f1_score=evaluate(y_pred, y_0)
         #f1 = f1_score(y_pred, y)
         print(f'Accuracy: {accuracy}, Recall: {recall}, Precision: {precision}, F1 Score: {f1_score}')
         
+        '''
         plt.figure(figsize=(8, 6))
         plt.plot(range(epochs), losses, label="Loss", color="blue")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.title("Training Loss Over Epochs")
         plt.legend()
-        plt.show()
+        plt.show()'''
         # 保存模型
         #self.save_model('model_weights.npy')
         
@@ -107,7 +111,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
     def save_model(self, filename):
         weights = [param.data for param in self.params()]
         np.save(filename, weights)
-'''
+
 class dataset():
     def __init__(self, data_path: str):
         self.data_path = data_path
@@ -192,11 +196,11 @@ if __name__ == '__main__':
             p.append(i)
             w[i] = (negative_num / positive_num)/4
         else:
-            w[i] = 1
+            w[i] = 1'''
     kanade_model = kanade(config.Config.input_size, config.Config.hidden_size1,config.Config.hidden_size2,config.Config.output_size)
-    kanade_model.training(Variable(training_x), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate,weight=w)
+    kanade_model.training(Variable(training_x), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate)#,weight=w)
     #kanade_model.save_model(config_.Config.save_model_path)
-    print('completed!')'''
+    print('completed!')
 '''
     #复制positive项
     training_y = training_y.reshape(leny,1)
@@ -225,7 +229,7 @@ if __name__ == '__main__':
     '''
     #print(training_x.shape)
     #print(training_y.shape)
-
+'''
 # 定义神经网络结构
 import torch
 import torch.nn as nn
@@ -234,18 +238,7 @@ from sklearn.datasets import make_classification
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 
-# 假设你有一个数据集 X (形状: [样本数, 特征数]) 和 y (形状: [样本数])
-# 这里用 make_classification 创建一个示例数据集
-X, y = make_classification(n_samples=1000, n_features=69, n_informative=30, n_classes=2, 
-                            weights=[0.9, 0.1], flip_y=0, random_state=42)
-
-# 假设 X 是数据集，y 是标签
-# 计算每个特征的均值和标准差
-mean = np.mean(X, axis=0)  # 对每一列计算均值
-std = np.std(X, axis=0)    # 对每一列计算标准差
-
-# 手动标准化数据
-X_standardized = (X - mean) / std
+X, y = training_x, training_y.astype(int)
 
 # 计算每个类别的样本数量
 class_0_count = np.sum(y == 0)
@@ -406,5 +399,5 @@ recall = true_positive / (true_positive + false_negative) if (true_positive + fa
 f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
 print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
-
+'''
 

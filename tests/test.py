@@ -6,13 +6,14 @@ from mydef import *
 import matplotlib.pyplot as plt
 #from mydef import as_variable
 import utils
-
-x = Variable(np.array([-3,0,3]))
-y = softmax_cross_entropy(x)
+''''
+x = Variable(np.array([-50,0,50]))
+t = Variable(np.array([0,0,1]))
+y = soft_cross_entropy(x,t)
 print(y)
 y.backward()
 print(x.grad)
-
+'''
 '''
 a=Variable(np.array([[1,2,3]]))
 b=Variable(np.array([1,2]))
@@ -29,10 +30,11 @@ b=softmax_cross_entropy_simple(a,t)
 print(b)
 b.backward()
 print(a.grad)'''
-'''
+
 x=np.array([[1,2,3],[4,5,6]])
-print(x.sum(axis=0,keepdims=True))'''
+print(x.sum(axis=1,keepdims=True))
 '''
+
 def sphere(x,y):
     return x**2+y**2
 x=Variable(np.array(1.0))
