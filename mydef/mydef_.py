@@ -434,7 +434,7 @@ def matmul(x, W):
 class MeanSquareError(Function):
     def forward(self, x0, x1):
         diff = x0 - x1 
-        y = (diff ** 2).sum() / len(diff)
+        y = 10*(diff ** 2).sum() / len(diff)
         return y
     
     def backward(self ,gy):
@@ -442,7 +442,7 @@ class MeanSquareError(Function):
         diff = x0 - x1
         gx0 = gy * diff *(2. / len(diff))
         gx1 = -gx0
-        return gx0, gx1
+        return 10*gx0, 10*gx1
     
 def meansquarederror(x0 ,x1):
     return MeanSquareError()(x0, x1)
@@ -450,7 +450,7 @@ def meansquarederror(x0 ,x1):
 class weighting_mean_square_error(Function):
     def forward(self, x0, x1, w):
         diff = x0 - x1
-        y = (w * diff ** 2).sum() / len(diff)
+        y = 10*(w * diff ** 2).sum() / len(diff)
         return y
     
     def backward(self, gy):
@@ -458,7 +458,7 @@ class weighting_mean_square_error(Function):
         diff = x0 - x1
         gx0 = gy * w * diff * (2. / len(diff))
         gx1 = -gx0
-        return gx0, gx1
+        return 10*gx0, 10*gx1
 
 
 def linear_simple(x, W, b=None):
