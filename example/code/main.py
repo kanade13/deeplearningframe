@@ -9,6 +9,7 @@ from mydef import *
 from mydef import evaluate,meansquarederror,Linear,sigmoid,Variable, SGD, Model
 # 将上级目录添加到sys.path，以便可以导入config_.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import matplotlib.pyplot as plt
 
 import config
 class kanade(Model):
@@ -30,6 +31,7 @@ class kanade(Model):
     def training(self, x, y, epochs=100, lr=0.01):
         optimizer = SGD(lr)
         optimizer.setup(self)
+        losses = []
         for epoch in range(epochs):
             y_pred = self.forward(x)
 
@@ -51,6 +53,13 @@ class kanade(Model):
         #f1 = f1_score(y_pred, y)
         print(f'Accuracy: {accuracy}, Recall: {recall}, Precision: {precision}, F1 Score: {f1_score}')
 
+        plt.figure(figsize=(8, 6))
+        plt.plot(range(epochs), losses, label="Loss", color="blue")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training Loss Over Epochs")
+        plt.legend()
+        plt.show()
         # 保存模型
         #self.save_model('model_weights.npy')
 
