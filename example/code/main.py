@@ -12,24 +12,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt
 np.set_printoptions(threshold=20)
 #import config
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
-from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
 import random
-from sklearn.metrics import precision_score, recall_score
+
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
 from mydef import *
 import config
-
+''''''
 class kanade(Model):
     def __init__(self, input_size, hidden_size1,hidden_size2, output_size):
         super().__init__()
@@ -276,177 +269,4 @@ if __name__ == '__main__':
     '''
     #print(training_x.shape)
     #print(training_y.shape)
-'''
-# 定义神经网络结构
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.datasets import make_classification
-from torch.utils.data import DataLoader, TensorDataset
-import numpy as np
-from mydef import Variable, Linear, Model, SGD, meansquarederror, sigmoid, evaluate, copypositive, PCA
-
-# 假设你有一个数据集 X (形状: [样本数, 特征数]) 和 y (形状: [样本数])
-# 这里用 make_classification 创建一个示例数据集
-X, y = make_classification(n_samples=1000, n_features=69, n_informative=30, n_classes=2, 
-                            weights=[0.9, 0.1], flip_y=0, random_state=42)
-
-# 假设 X 是数据集，y 是标签
-# 计算每个特征的均值和标准差
-mean = np.mean(X, axis=0)  # 对每一列计算均值
-std = np.std(X, axis=0)    # 对每一列计算标准差
-
-# 手动标准化数据
-X_standardized = (X - mean) / std
-
-# 计算每个类别的样本数量
-class_0_count = np.sum(y == 0)
-class_1_count = np.sum(y == 1)
-
-# 确定我们要增加的少数类样本数量
-# 这里我们使用复制的方式简单地进行过采样
-if class_0_count > class_1_count:
-    # 少数类是 1，复制少数类样本
-    minority_class_samples = X[y == 1]
-    minority_class_labels = y[y == 1]
-    num_samples_to_generate = class_0_count - class_1_count
-else:
-    # 少数类是 0，复制少数类样本
-    minority_class_samples = X[y == 0]
-    minority_class_labels = y[y == 0]
-    num_samples_to_generate = class_1_count - class_0_count
-
-# 随机复制少数类样本来增加样本数量
-additional_samples = minority_class_samples[np.random.choice(minority_class_samples.shape[0], num_samples_to_generate, replace=True)]
-additional_labels = minority_class_labels[np.random.choice(minority_class_labels.shape[0], num_samples_to_generate, replace=True)]
-
-# 组合过采样后的数据
-X_resampled = np.concatenate([X, additional_samples], axis=0)
-y_resampled = np.concatenate([y, additional_labels], axis=0)
-
-# 设置随机种子（用于控制结果的可重复性）
-random_state = 42
-np.random.seed(random_state)
-
-# 获取数据集的大小
-num_samples = X_resampled.shape[0]
-
-# 生成一个随机排列的索引
-indices = np.random.permutation(num_samples)
-
-# 划分训练集和测试集的样本数量
-test_size = 0.2
-test_samples = int(num_samples * test_size)
-train_samples = num_samples - test_samples
-
-# 根据随机索引分割数据集
-train_indices = indices[:train_samples]
-test_indices = indices[test_samples:]
-
-X_train = X_resampled[train_indices]
-y_train = y_resampled[train_indices]
-X_test = X_resampled[test_indices]
-y_test = y_resampled[test_indices]
-'''
-# 转换为 Variable
-X_train = Variable(X_train)
-y_train = Variable(y_train)
-X_test = Variable(X_test)
-y_test = Variable(y_test)'''
-train_dataset = myDataset(X_train, y_train)
-test_dataset = myDataset(X_test, y_test)
-train_loader = myDataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = myDataLoader(test_dataset, batch_size=64, shuffle=False)
-
-# 定义模型
-class SimpleNN(Model):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = Linear(out_size=128, in_size=69)
-        self.layer2 = Linear(out_size=64,in_size=128)
-        self.layer3 = Linear(out_size=32,in_size=64)
-        self.output = Linear(out_size=2,in_size=32)
-
-    def forward(self, x):
-        x = sigmoid(self.layer1(x))
-        x = sigmoid(self.layer2(x))
-        x = sigmoid(self.layer3(x))
-        x = self.output(x)
-        return x
-
-model = SimpleNN()
-
-# 定义损失函数和优化器
-criterion = meansquarederror
-optimizer = SGD(lr=0.01)
-
-# 训练模型
-num_epochs = 20
-batch_size = 64
-
-for epoch in range(num_epochs):
-    model.cleargrads()
-    permutation = np.random.permutation(X_train.shape[0])#X_train.shape[0] 表示训练数据集 X_train 的样本数量。通过调用 np.random.permutation(X_train.shape[0])，我们生成了一个长度与训练集样本数量相同的数组，其中包含了所有样本的索引，但这些索引的顺序是随机的。
-                                                        #这个随机排列的索引数组通常用于打乱数据集，以确保在训练过程中每个批次的数据都是随机的，从而提高模型的泛化能力。通过这种方式，可以避免模型在训练过程中对数据的顺序产生依赖，从而提高模型的鲁棒性和性能。
-    epoch_loss = 0.0
-    correct = 0
-    total = 0
-    all_preds = []
-    all_labels = []
-
-    for inputs, labels in train_loader:
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.update()
-
-        epoch_loss += loss.data
-        predicted = np.argmax(outputs.data, axis=1)
-        total += labels.shape[0]
-        correct += np.sum(predicted == labels.data)
-
-        all_preds.extend(predicted)
-        all_labels.extend(labels.data)
-
-    # 计算 Precision 和 Recall
-    all_preds = np.array(all_preds)
-    all_labels = np.array(all_labels)
-
-    true_positive = np.sum((all_preds == 1) & (all_labels == 1))
-    false_positive = np.sum((all_preds == 1) & (all_labels == 0))
-    false_negative = np.sum((all_preds == 0) & (all_labels == 1))
-
-    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
-    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
-
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {epoch_loss/len(X_train):.4f}, "
-          f"Accuracy: {100*correct/total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}")
-
-# 测试模型
-model.cleargrads()
-correct = 0
-total = 0
-all_preds = []
-all_labels = []
-
-outputs = model(X_test)
-predicted = np.argmax(outputs.data, axis=1)
-total += y_test.shape[0]
-correct += np.sum(predicted == y_test.data)
-all_preds.extend(predicted)
-all_labels.extend(y_test.data)
-
-all_preds = np.array(all_preds)
-all_labels = np.array(all_labels)
-
-true_positive = np.sum((all_preds == 1) & (all_labels == 1))
-false_positive = np.sum((all_preds == 1) & (all_labels == 0))
-false_negative = np.sum((all_preds == 0) & (all_labels == 1))
-
-precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
-recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
-f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-
-print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
-'''
 
