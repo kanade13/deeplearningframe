@@ -447,6 +447,20 @@ class MeanSquareError(Function):
 def meansquarederror(x0 ,x1):
     return MeanSquareError()(x0, x1)
 
+class weighting_mean_square_error(Function):
+    def forward(self, x0, x1, w):
+        diff = x0 - x1
+        y = (w * diff ** 2).sum() / len(diff)
+        return y
+    
+    def backward(self, gy):
+        x0, x1, w = self.inputs
+        diff = x0 - x1
+        gx0 = gy * w * diff * (2. / len(diff))
+        gx1 = -gx0
+        return gx0, gx1
+
+
 def linear_simple(x, W, b=None):
     t = matmul(x, W)
     if b is None:
@@ -463,7 +477,7 @@ class Linearf(Function):
         #print('t:',t)
         if b is None:
             return t.data
-        return (t+b).data
+        return (t.data+b.data)
     
     def backward(self, gy):
         W = self.inputs[1]
@@ -471,7 +485,7 @@ class Linearf(Function):
         b = None if self.inputs[2] is None else self.inputs[2]
         #如果b的形状是(a,),转变为(1,a)
         if b.data is not None and b is not None:
-            print('b:',b)
+            #print('b:',b)
             if b.ndim == 1:
                 b = reshape(b, (1, b.size))
         return matmul(gy,W.T) , matmul(x.T,gy), sum_to(gy, b.shape) if self.inputs[2] is not None and self.inputs[2].data is not None else None
@@ -659,7 +673,7 @@ class MLP(Model):
 
 
 class Linear(Layer):
-    def __init__(self, out_size, nobias=True, dtype=np.float32, in_size=None):
+    def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
         super().__init__()
         self.in_size = in_size
         self.out_size = out_size
@@ -672,13 +686,13 @@ class Linear(Layer):
         if nobias:
             self.b = None
         else:
-            self.b = Parameter(np.zeros(0, dtype=dtype), name = 'b')
+            self.b = Parameter(np.zeros(out_size, dtype=dtype), name = 'b')
 
     def __init__W(self):
         I, O = self.in_size, self.out_size
         W_data = np.random.randn(I, O).astype(self.dtype) * np.sqrt(1 / I)
         self.W.data = W_data
-        print('w.shape',self.W.data.shape)
+        #print('w.shape',self.W.data.shape)
 
     def forward(self, x):
         if self.W.data is None:
@@ -699,7 +713,7 @@ class Optimizer:
 
     def update(self):
         params = [p for p in self.target.params() if p.grad is not None]
-        print('params:',params)
+        #print('params:',params)
         #预处理(可选)
         #for f in self.hooks:
         #    f(params)
@@ -716,7 +730,7 @@ class SGD(Optimizer):
         self.lr = lr
 
     def update_one(self, param):
-        param.data -= self.lr * param.grad.data
+        param.data -= self.lr * param.grad.data.reshape(param.data.shape)
     
 def accuracy(y, t):
     y, t = as_variable(y), as_variable(t)
@@ -728,13 +742,17 @@ def accuracy(y, t):
 
 def evaluate(y, t):#计算precision,recall和f_score
     y, t = as_variable(y), as_variable(t)
-
-    pred = y.data.argmax(axis = 1).reshape(t.shape)
+    #print('y.shape:',y.shape)
+    pred = y.data
+    print('pred:',pred)
+    print('t:',t.data)
+    #将t.data转为int类型
+    t=t.data.astype(int)
     tp=0
     fp=0
     fn=0
     tn=0
-    for i in len(pred):
+    for i in range(len(pred)):
         if pred[i] == t[i] and pred[i] == 1:
             tp = tp + 1
         if pred[i] == 0 and t[i] == 1:
@@ -743,6 +761,10 @@ def evaluate(y, t):#计算precision,recall和f_score
             fp = fp + 1
         if pred[i] == 0 and t[i] == 0:
             tn = tn + 1
+    print('tp:',tp)
+    print('fp:',fp)
+    print('fn:',fn)
+    print('tn:',tn)
     accuracy=(tp+tn)/(tp+fn+fp+tn)
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)

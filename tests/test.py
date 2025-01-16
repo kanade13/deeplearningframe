@@ -210,7 +210,7 @@ for i in range(max_iters):
     model.cleargrads()
     y_pred = model(x)
     loss = MeanSquareError()(y, y_pred)
-    print(loss.shape)
+    #print(loss.shape)
     loss.backward()
     optimizer.update()
     if i % 1000 == 0:

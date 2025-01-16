@@ -10,43 +10,56 @@ from mydef import evaluate,meansquarederror,Linear,sigmoid,Variable, SGD, Model
 # 将上级目录添加到sys.path，以便可以导入config_.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt
-
+np.set_printoptions(threshold=20)
 import config
 class kanade(Model):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size1,hidden_size2, output_size):
         super().__init__()
         #print('input_size',input_size)
         #print('hidden_size',hidden_size)
-        self.fc1 = Linear(in_size=input_size, out_size=hidden_size)
-        self.fc2 = Linear(in_size=hidden_size, out_size=output_size)
+        self.fc1 = Linear(in_size=input_size, out_size=hidden_size1)
+        self.fc2 = Linear(in_size=hidden_size1, out_size=hidden_size2)
+        self.fc3 = Linear(in_size=hidden_size2, out_size=output_size)
 
     def forward(self, x):
         h = self.fc1(x)
         #print('h.shape',h.shape)
         h = sigmoid(h)
         y = self.fc2(h)
-        print('y.shape',y.shape)
+        y = sigmoid(y)
+        y = self.fc3(y)
+        #print('y.shape',y.shape)
         return y
 
-    def training(self, x, y, epochs=100, lr=0.01):
+    def training(self, x, y, epochs=100, lr=0.001,weight=None):
         optimizer = SGD(lr)
         optimizer.setup(self)
         losses = []
+        y_pred = None
         for epoch in range(epochs):
             y_pred = self.forward(x)
 
             #如果y_pred和y的shape不一样，需要对y_pred进行reshape
             if y_pred.shape != y.shape:
                 y_pred = y_pred.reshape(y.shape)
-
             #print('y_pred.shape',y_pred.shape)
             #print('y.shape',y.shape)
-            loss = meansquarederror(y_pred, y)
-            print(loss)
+            #loss = meansquarederror(y_pred, y)
+            loss=weighting_mean_square_error()(y_pred,y,w)
             loss.backward()
             optimizer.update()
-            if epoch % 10 == 0:
-                print(f'Epoch {epoch}, Loss: {loss.data}')
+            if epoch == 10:
+                optimizer.lr = 0.0001
+            if epoch == 20:
+                optimizer.lr = 0.00001
+            print(f'Epoch {epoch}, Loss: {loss.data}')
+        #对y_pred排序
+        sorted_pred = np.sort(y_pred.data)[::-1]
+        s=sorted_pred[6257]
+        print('s:',s)
+        for i in range(6250,6300):
+            print(sorted_pred[i])
+        y_pred.data = np.where(y_pred.data > 0.3, 1, 0)
 
         # 评估模型性能
         accuracy,precision,recall,f1_score=evaluate(y_pred, y)
@@ -140,7 +153,49 @@ if __name__ == '__main__':
     #print(config.Config.input_size)
     #print(config.Config.hidden_size)
     #print(config.Config.output_size)
-    kanade_model = kanade(config.Config.input_size, config.Config.hidden_size, config.Config.output_size)
-    kanade_model.training(Variable(training_x), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate)
+    p=[]
+    #设置权重
+    positive_num = np.sum(training_y)
+    negative_num = len(training_y) - positive_num
+    w = np.zeros(len(training_y))
+    leny=len(training_y)
+    for i in range(leny):
+        if training_y[i] == 1:
+            p.append(i)
+            w[i] = (negative_num / positive_num)/4
+        else:
+            w[i] = 1
+    kanade_model = kanade(config.Config.input_size, config.Config.hidden_size1,config.Config.hidden_size2,config.Config.output_size)
+    kanade_model.training(Variable(training_x), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate,weight=w)
     #kanade_model.save_model(config_.Config.save_model_path)
     print('completed!')
+'''
+    #复制positive项
+    training_y = training_y.reshape(leny,1)
+    print(len(p))
+    print(p)
+    for i in range(len(p)):
+        if i==0:
+            #计时
+            import time
+            start = time.time()
+        training_x = np.vstack((training_x,training_x[p[i]]))
+        training_x = np.vstack((training_x,training_x[p[i]]))
+        #print(training_y[i].shape)
+        #print(training_y[i].reshape(1,).shape)
+        if i==0:
+            end = time.time()
+            print('time:',end-start)       
+        training_y = np.vstack((training_y,training_y[p[i]][0].reshape(1,1)))
+        training_y = np.vstack((training_y,training_y[p[i]][0].reshape(1,1)))
+        if i==0:
+            end = time.time()
+            print('time:',end-start)
+    yyy=training_y.shape[0]
+    training_y=training_y.reshape(yyy,)    
+    print("finish preprocessing")
+    '''
+    #print(training_x.shape)
+    #print(training_y.shape)
+
+
