@@ -1,269 +1,273 @@
+
+# 定义神经网络结构
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.datasets import make_classification
+from torch.utils.data import DataLoader, TensorDataset
+import numpy as np
 import numpy as np
 import os,sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))#将mydef文件夹加入环境变量
-#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from mydef import *
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import argparse
+import sys
+#将mydef文件夹加入环境变量
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+#from mydef import *
+#from mydef import evaluate,meansquarederror,Linear,sigmoid,Variable, SGD, Model
+# 将上级目录添加到sys.path，以便可以导入config_.py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt
-#from mydef import as_variable
-import utils
+np.set_printoptions(threshold=20)
+#import config
 
-a=Variable(np.array([[1,2,3]]))
-b=Variable(np.array([1,2]))
-W=Variable(np.array([[1,2],[4,5],[3,6]]))
-z=Linearf()(a,W,b)
-z.backward()
-print(b.grad)
-'''
-a=Variable(np.random.uniform(-1, 1, size=(50000)).astype(np.float32))
-t=np.random.randint(0, 2, size=(50000))
-#print(a)
-#print(t)
-b=softmax_cross_entropy_simple(a,t)
-print(b)
-b.backward()
-print(a.grad)'''
-'''
-x=np.array([[1,2,3],[4,5,6]])
-print(x.sum(axis=0,keepdims=True))'''
-'''
-def sphere(x,y):
-    return x**2+y**2
-x=Variable(np.array(1.0))
-y=Variable(np.array(1.0))
-z=sphere(x,y)
-z.backward()
-print(x.grad,y.grad)
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import make_classification
+from torch.utils.data import DataLoader, TensorDataset
+import numpy as np
 
+from sklearn.metrics import precision_score, recall_score
 
-def matyas(x,y):
-    return 0.26*(x**2+y**2)-0.48*x*y
-x=Variable(np.array(1.0))
-y=Variable(np.array(1.0))
-z=matyas(x,y)
-z.backward()
-print(x.grad,y.grad)
-
-
-def goldstein(x,y):
-    return (1+(x+y+1)**2*(19-14*x+3*x**2-14*y+6*x*y+3*y**2))*(30+(2*x-3*y)**2*(18-32*x+12*x**2+48*y-36*x*y+27*y**2))
-x=Variable(np.array(1.0))
-y=Variable(np.array(1.0))
-z=goldstein(x,y)
-z.backward()
-print(x.grad,y.grad)
-'''
-
-'''
-def himmelblau(x,y):
-    return (x**2+y-11)**2+(x+y**2-7)**2
-
-x=Variable(np.array(1.0))
-y=Variable(np.array(1.0))
-z=himmelblau(x,y)
-z.backward()
-print(x.grad,y.grad)
-
-'''
-'''
-x=np.array([1,2])
-y=np.array([[1,2],[3,4]])
-print(x.dot(y))
-z=np.array([1,2,3])
-print(x.dot(z))'''
-
-'''
-x=Variable((np.array(2.0)))
-#c=Variable(np.array(3))
-y=x**5;
-y.backward(create_graph=True)
-print(x.grad)
-
-gx=x.grad
-x.cleargrad()
-gx.backward()
-print(x.grad)
-
-x=Variable(np.array([2.0,3.0]))
-y=2*x
-z=2*x.data
-print(y,type(y))
-print(z,type(z))
-'''
-
-'''
-x=Variable(np.array(2.0))
-y=x+np.array(3.0)
-print(y)
-
-#测试运算
-x=Variable(np.array([[1.0,2.0,3.0],[4.0,5.0,6.0]]))
-y1=Variable(np.array([[1.0,2.0,3.0],[4.0,5.0,6.0]]))
-y1=y1-x
-
-print(y1)
-
-x=Variable(np.array(2))
-y=3.0-x
-print(y)
-x=Variable(np.array(2.0))
-a=square(x)
-s1=Square()
-s2=Square()
-y=add(s1(a),s2(a))
-y.backward()
-print(y.data)
-print(x.grad)
-
-A = Square()
-B = Exp()
-C = Square()
-x= Variable(np.array(0.5))
-a = A(x)
-b = B(a)
-y = C(b)
-print(b.data)#b.data=1.2840254166877414
-print(y.data)#y.data=1.6487212707001282
-print(C.input.data)#C.input.data=b.data=1.2840254166877414
-y.grad = np.array(1.0)
-b.grad = C.backward(y.grad)  
-print(b.grad)#b.grad=2.568050833375483=2*b.data*1.0
-a.grad = B.backward(b.grad)
-x.grad = A.backward(a.grad)
-print(x.grad)#3.297442541400256
-y.grad = np.array(1.0)
-y.backward()
-print("grad by automatic backward",x.grad)#3.297442541400256
-'''
-
-'''    x = Variable(np.array(3.0))
-y = Variable(np.array(2.0))
-z = add(square(x), square(y))
-z.backward()
-print(z.data)#13.0
-print(x.grad)#6.0
-print(y.grad)#4.0
-z.backward()
-print(x.grad)#12.0
-print(y.grad)#8.0'''
-
-'''
-x=Variable(np.array([[1,2,3],[4,5,6]]))
-y=Reshape([3,2])(x)
-print(y)
-#z=x.reshape(6)
-#print(z)
-#z.backward()
-#print(x.grad)
-'''
-'''
-x=Variable(np.array([[2,3],[4,5]]))
-y=Variable(np.array([[3],[2]]))
-A=MatMul()
-B=Square()
-#z=B(x)
-#print(z)
-y=x.T()
-print(y)
-y.backward()
-print(x.grad)
-
-x=Variable(np.array([2,3]))
-y=Variable(np.array([4,5]))
-A=Add()
-z=A(x,y)
-    '''
-'''
-def sum(x, axis=None, keepdims=False):
-    return Sum(axis, keepdims)(x)
-M=MatMul()
-np.random.seed(0)
-x = np.random.rand(100, 1)
-y = 5 + 2 * x + np.random.rand(100, 1)
-x, y = Variable(x), Variable(y) # 可以省略
-W = Variable(np.zeros((1, 1)))
-b = Variable(np.zeros(1))
-def predict(x):
-    y = M(x, W) + b
-    return y
-def mean_squared_error(x0, x1):
-    diff = x0 - x1
-    return sum(diff ** 2) / len(diff)
-lr = 0.1
-iters = 100
-for i in range(iters):
-    y_pred = predict(x)
-    loss = mean_squared_error(y, y_pred)
-    W.cleargrad()
-    b.cleargrad()
-    loss.backward()
-    W.data -= lr * W.grad.data
-    b.data -= lr * b.grad.data
-    print(W, b, loss)'''
-'''
-#x=Variable(np.array([1,2]))
-#W=Variable(np.array([1,2],[3,4]))
-x=Variable(np.array([[1,2],[3,4]]))
-W=Variable(np.array([[1,2],[3,4]]))
-
-z=MatMul()(x,W)
-print(z)
-z.backward()
-print(x.grad)
-'''
-
-'''
-np.random.seed(0)
-x = np.random.rand(100,1)
-y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
-
-lr = 0.2
-max_iters = 10000
-hidden_size = 10
-model=MLP([hidden_size,hidden_size,hidden_size,1])
-optimizer = SGD(lr).setup(model)
-
-if os.path.exists('my_mlp.npz'):
-    model.load_weights('my_mlp.npz')
-
-for i in range(max_iters):
-    model.cleargrads()
-    y_pred = model(x)
-    loss = MeanSquareError()(y, y_pred)
-    #print(loss.shape)
-    loss.backward()
-    optimizer.update()
-    if i % 1000 == 0:
-        print(loss)
-
-plt.figure(figsize=(8, 6))
-plt.scatter(x, y, label="Data Points", color="blue", alpha=0.6)  # 数据点
-x_fit = np.linspace(0, 1, 100).reshape(-1, 1)
-y_fit = model(x_fit)  # 拟合曲线
-
-plt.plot(x_fit, y_fit.data.reshape(-1), label="Fitted Curve", color="red", linewidth=2)  # 拟合曲线
-plt.xlabel("x")
-plt.ylabel("y")
-plt.title("Data Points and Fitted Curve")
-plt.legend()
-plt.show()
-
-model.save_weights('my_mlp.npz')'''
-'''
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 
 
 
-x=Variable(np.array([[1,2]]))
-W=Variable(np.array([[1,2],[3,4]]))
-b=Variable(np.array([1,2]))
-A=Linearf()
-print(np.array([1,2]).shape)
-z=A(x,W,b)  
-print('z:',z)
-z.backward()
-print(x.grad,'\n',W.grad,'\n',b.grad)'''
-'''
-x=Variable(np.array([1,2]))
-y=Variable(np.array([3,4]))
-A=MeanSquareError()
-z=A(x,y)
-print(z)'''
+class dataset():
+    def __init__(self, data_path: str):
+        self.data_path = data_path
+    
+    def data_collection(self):
+        '''
+            Parameter
+            ---------
+            data_path: the input data path, which can be a folder or a npy file 
+            
+            return
+            ------
+            x: the training features, with shape of (N, 69), N is the sample size
+            y: the training lables, with shape of (N, 1), N is the sample size
+        '''
+        def normalization(x):
+            def normalize(vector):
+                max_vals = np.max(vector, axis=0)
+                min_vals = np.min(vector, axis=0)
+                normalized_vector = (vector - min_vals) / \
+                    (max_vals - min_vals + 1e-3)
+                return normalized_vector
+            if not np.all(x<=1):
+                x = normalize(x)
+            return x
+        try:
+            if self.data_path.endswith('npy'):
+                data = np.load(self.data_path, allow_pickle=True).item()
+                x = normalization(data['features_list'][0])
+                y = data['labels_list'][0]
+            else:
+                x, y = [], []  # Initialize lists to store features and labels
+                for npy_file in os.listdir(self.data_path):
+                    npy_file_path = os.path.join(self.data_path, npy_file)
+                    data = np.load(npy_file_path, allow_pickle=True).item()
+                    x.append(normalization(data['features_list'][0]))
+                    y.append(data['labels_list'][0])
+                x = np.vstack(x).astype(np.float32) 
+                y = np.vstack(y).astype(np.float32).reshape(-1)
+
+            return x, y
+
+        except Exception as e:
+            print(f"An error occurred while loading data: {e}")  
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='The training process')
+    parser.add_argument('--data_path', default='', type=str)
+
+    args = parser.parse_args()
+    #print(os.getcwd())
+
+    data_path = "data/data"
+    data_path = args.data_path if args.data_path else data_path
+    data = dataset(data_path)
+    training_x, training_y = data.data_collection()
+    print(f'the training features of the circuits are: {training_x} with shape of {training_x.shape}')
+    print(f'the training labels of the circuits are: {training_y} with shape of {training_y.shape}')
+# 假设你有一个数据集 X (形状: [样本数, 特征数]) 和 y (形状: [样本数])
+# 这里用 make_classification 创建一个示例数据集
+X, y = training_x, training_y
+
+# 假设 X 是数据集，y 是标签
+# 计算每个特征的均值和标准差
+mean = np.mean(X, axis=0)  # 对每一列计算均值
+std = np.std(X, axis=0)    # 对每一列计算标准差
+
+# 手动标准化数据
+X_standardized = (X - mean) / std
+
+# 计算每个类别的样本数量
+class_0_count = np.sum(y == 0)
+class_1_count = np.sum(y == 1)
+
+# 确定我们要增加的少数类样本数量
+# 这里我们使用复制的方式简单地进行过采样
+if class_0_count > class_1_count:
+    # 少数类是 1，复制少数类样本
+    minority_class_samples = X[y == 1]
+    minority_class_labels = y[y == 1]
+    num_samples_to_generate = class_0_count - class_1_count
+else:
+    # 少数类是 0，复制少数类样本
+    minority_class_samples = X[y == 0]
+    minority_class_labels = y[y == 0]
+    num_samples_to_generate = class_1_count - class_0_count
+
+# 随机复制少数类样本来增加样本数量
+additional_samples = minority_class_samples[np.random.choice(minority_class_samples.shape[0], num_samples_to_generate, replace=True)]
+additional_labels = minority_class_labels[np.random.choice(minority_class_labels.shape[0], num_samples_to_generate, replace=True)]
+
+# 组合过采样后的数据
+X_resampled = np.concatenate([X, additional_samples], axis=0)
+y_resampled = np.concatenate([y, additional_labels], axis=0)
+
+
+
+# 假设 X_resampled 是特征数据，y_resampled 是标签数据
+# 设置随机种子（用于控制结果的可重复性）
+random_state = 42
+np.random.seed(random_state)
+
+# 获取数据集的大小
+num_samples = X_resampled.shape[0]
+
+# 生成一个随机排列的索引
+indices = np.random.permutation(num_samples)
+
+# 划分训练集和测试集的样本数量
+test_size = 0.2
+test_samples = int(num_samples * test_size)
+train_samples = num_samples - test_samples
+
+# 根据随机索引分割数据集
+train_indices = indices[:train_samples]
+test_indices = indices[train_samples:]
+
+X_train = X_resampled[train_indices]
+y_train = y_resampled[train_indices]
+X_test = X_resampled[test_indices]
+y_test = y_resampled[test_indices]
+
+
+
+# 转换为 PyTorch 张量
+X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train, dtype=torch.long)
+X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+y_test_tensor = torch.tensor(y_test, dtype=torch.long)
+
+# 创建 DataLoader
+train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+# 神经网络定义
+class SimpleNN(nn.Module):
+    def __init__(self):
+        super(SimpleNN, self).__init__()
+        self.layer1 = nn.Linear(69, 128)
+        self.layer2 = nn.Linear(128, 64)
+        self.layer3 = nn.Linear(64, 32)
+        self.output = nn.Linear(32, 2)
+
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x):
+        x = self.relu(self.layer1(x))
+        x = self.dropout(self.relu(self.layer2(x)))
+        x = self.relu(self.layer3(x))
+        x = self.output(x)
+        return x
+
+model = SimpleNN()
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+
+# 训练模型
+num_epochs = 20
+
+for epoch in range(num_epochs):
+    model.train()
+    running_loss = 0.0
+    correct = 0
+    total = 0
+    all_preds = []
+    all_labels = []
+
+    for inputs, labels in train_loader:
+        print('inputs.shape',inputs.shape)
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        print('outputs.shape',outputs.shape)
+        #inputs.shape torch.Size([64, 69])
+        #outputs.shape torch.Size([64, 2])
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+
+        all_preds.extend(predicted.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+
+    # 计算 Precision 和 Recall
+    all_preds = torch.tensor(all_preds)
+    all_labels = torch.tensor(all_labels)
+
+    true_positive = ((all_preds == 1) & (all_labels == 1)).sum().item()
+    false_positive = ((all_preds == 1) & (all_labels == 0)).sum().item()
+    false_negative = ((all_preds == 0) & (all_labels == 1)).sum().item()
+
+    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
+
+    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}, "
+          f"Accuracy: {100*correct/total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}")
+
+# 测试模型
+model.eval()
+correct = 0
+total = 0
+all_preds = []
+all_labels = []
+
+with torch.no_grad():
+    for inputs, labels in test_loader:
+        outputs = model(inputs)
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+        all_preds.extend(predicted.cpu().numpy())
+        all_labels.extend(labels.cpu().numpy())
+
+all_preds = torch.tensor(all_preds)
+all_labels = torch.tensor(all_labels)
+
+true_positive = ((all_preds == 1) & (all_labels == 1)).sum().item()
+false_positive = ((all_preds == 1) & (all_labels == 0)).sum().item()
+false_negative = ((all_preds == 0) & (all_labels == 1)).sum().item()
+
+precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
+recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
+f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+
+print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
+
