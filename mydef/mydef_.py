@@ -2,7 +2,7 @@ import numpy as np
 import weakref
 import warnings
 import heapq
-
+import contextlib
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -552,7 +552,7 @@ class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都
 
 class Soft_Cross_entropy(Function):
     def forward(self, x, t):
-        x = sigmoid(x).data
+        x = 1 / (1 + np.exp(-x))
         y = t * np.log(x) + (1-t) * np.log(1-x)
         return -sum(y).data
 
@@ -712,6 +712,7 @@ class Linear(Layer):
             self.__init__W()
 
         y = linear(x, self.W, self.b)
+        y = dropout(y)
         return y
 
 class Optimizer:
@@ -905,6 +906,30 @@ class ReLU(Function):
         return gx
 def relu(x):
     return ReLU()(x)
+
+class Config:
+    enable_backprop = True
+    train = True
+@contextlib.contextmanager
+def using_config(name, value):
+    old_value = getattr(Config, name)
+    setattr(Config, name, value)
+    yield
+    setattr(Config, name, old_value)
+def test_mode():
+    return using_config('train', False)
+
+def dropout(x, dropout_ratio=0.5):
+    x = as_variable(x)
+    if dezero.Config.train:
+        xp = cuda.get_array_module(x)
+        mask = xp.random.rand(*x.shape) > dropout_ratios
+        
+        scale= xp.array(1.0 - dropout_ratio).astype(x.dtype)
+        y = x * mask / scale
+        return y
+    else:
+        return x
 
 def setup_variable():
     Variable.__add__ = add

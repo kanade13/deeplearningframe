@@ -7,12 +7,19 @@ import matplotlib.pyplot as plt
 #from mydef import as_variable
 import utils
 
+x = Variable(np.array([-3,0,3]))
+y = softmax_cross_entropy(x)
+print(y)
+y.backward()
+print(x.grad)
+
+'''
 a=Variable(np.array([[1,2,3]]))
 b=Variable(np.array([1,2]))
 W=Variable(np.array([[1,2],[4,5],[3,6]]))
 z=Linearf()(a,W,b)
 z.backward()
-print(b.grad)
+print(b.grad)'''
 '''
 a=Variable(np.random.uniform(-1, 1, size=(50000)).astype(np.float32))
 t=np.random.randint(0, 2, size=(50000))
