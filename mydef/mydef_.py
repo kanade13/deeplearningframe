@@ -537,11 +537,6 @@ class GetItemGrad(Function):
     def backward(self, ggx):
         return get_item(ggx, self.slices)
 
-def softmax_simple(x):
-    x = as_variable(x)
-    y = exp(x)
-    sum_y = sum(y, axis = 1, keepdims = True)
-    return y / sum_y
 
 class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都是一个样本,对应的输出的每一行都是一个y的概率分布
     def forward(self, x, axis = 1):
@@ -553,19 +548,81 @@ class SoftMax(Function):#输入为由x_i为每一行排成的矩阵,每个x_i都
     def backward(self, gy):
         raise NotImplementedError()
         #TODO:softmax函数求导
+def softmax_simple(x: np.ndarray) -> np.ndarray:
+    #x中的值过大时,先进行限制
+        # 获取输入的最大值和最小值
+    max_x = np.max(x)
+    min_x = np.min(x)
+    
+    # 计算缩放因子
+    scale_factor = 10 / max(abs(max_x), abs(min_x))  # 缩放因子，避免溢出，确保最大值不超过500
+    
+    # 对输入进行缩放
+    x_scaled = x * scale_factor
 
-class Soft_Cross_entropy(Function):
-    def forward(self, x, t):
+    # 如果是二维数组（batch情况）
+    if x_scaled.ndim == 2:
+        x_scaled = x_scaled - np.max(x_scaled, axis=1, keepdims=True)  # 防止溢出，减去每一行的最大值
+        y = np.exp(x_scaled)
+        sum_y = np.sum(y, axis=1, keepdims=True)
+    
+    # 如果是一维数组（单个样本情况）
+    if x_scaled.ndim == 1:
+        x_scaled = x_scaled - np.max(x_scaled)  # 防止溢出，减去最大值
+        y = np.exp(x_scaled)
+        sum_y = np.sum(y)
+    
+    # 返回 softmax 结果
+    return y / sum_y
+
+class Soft_Cross_entropy(Function):#二分类交叉熵
+    def forward(self, x, t):#在本框架中t为一个0-1的标签(一个值),所以在backward中我使用了t=(t,1-t)
+
+        '''
         x = np.clip(x, -50, 50)
         x = 1 / (1 + np.exp(-x))
         x = np.clip(x, 1e-15, 1-(1e-15))
         y = t * np.log(x) + (1-t) * np.log(1-x)
-        return -sum(y).data
+        '''
+        """
+        x: 网络输出的 raw scores（未经过 softmax 处理的值）
+        t: 真实标签（目标值）
+        """
+
+        a = softmax_simple(x)  # 计算 softmax 概率分布
+        a.clip(1e-3, 1 - 1e-3)  # 防止 log(0) 的发生
+        #print('a:',a)
+        #print('a.shape:',a.shape)
+        
+        
+        t=(t,1-t)
+        
+        #将tuple转化为array
+        t=np.array(t)
+        #print('t:',t)
+        #print('t.shape:',t.shape)
+        if (t.dot( np.log(a))).ndim==1:
+            y = -np.sum(t * np.log(a))  # 计算交叉熵损失
+        else:
+            y = -np.sum(t .dot( np.log(a)), axis=1)  # 计算交叉熵损失
+        #print('y:',y)
+        #print('softmaxentropy:',np.sum(y).shape)
+        return np.sum(y)  # 返回总损失
 
     def backward(self, gy):
+        
         x ,t = self.inputs[0], self.inputs[1]
-        gx =  (-t * 1 / (1+exp(x)) + (1-t) * 1 / (1+exp(-x))) *gy
-        return gx
+        if isinstance(t, Variable):
+            t = t.data
+        if isinstance(x, Variable):
+            x = x.data
+        a=softmax_simple(x)
+        #gx =  (-t * 1 / (1+exp(x)) , (1-t) * 1 / (1+exp(-x))) *gy
+        t=(t,1-t)
+        t=np.array(t).T
+        dx = a - t  # 交叉熵损失对输入 x 的梯度：dx = softmax_output - target
+        dx *= gy 
+        return dx 
 
 def soft_cross_entropy(x, t):
     return Soft_Cross_entropy()(x, t)

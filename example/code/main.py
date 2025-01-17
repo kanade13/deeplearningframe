@@ -12,24 +12,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt
 np.set_printoptions(threshold=20)
 #import config
-
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.datasets import make_classification
-from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
+import random
 
-from sklearn.metrics import precision_score, recall_score
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
 from mydef import *
 import config
-
+''''''
 class kanade(Model):
     def __init__(self, input_size, hidden_size1,hidden_size2, output_size):
         super().__init__()
@@ -156,7 +149,54 @@ class dataset():
 
         except Exception as e:
             print(f"An error occurred while loading data: {e}")  
+class myDataset():
+    def __init__(self, features, labels):
+        self.features = features
+        self.labels = labels
 
+    def __len__(self):
+        # 数据集的大小
+        return self.labels.shape[0]
+
+    def __getitem__(self, idx):
+        # 根据索引返回特征和标签
+        feature = self.features[idx]
+        label = self.labels[idx]
+        return feature, label
+class myDataLoader():
+    def __init__(self, dataset, batch_size, shuffle=True):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.indices = list(range(len(self.dataset)))  # 生成一个索引列表
+
+    def __iter__(self):
+        # 每次迭代前根据 shuffle 标志决定是否打乱数据
+        if self.shuffle:
+            random.shuffle(self.indices)  # 随机打乱索引
+
+        # 返回迭代器
+        for i in range(0, len(self.dataset), self.batch_size):
+            batch_features = []
+            batch_labels = []
+            
+            # 获取当前批次的索引
+            batch_indices = self.indices[i:i + self.batch_size]
+            
+            for idx in batch_indices:
+                feature, label = self.dataset[idx]  # 获取样本
+                batch_features.append(feature)
+                batch_labels.append(label)
+            
+            # 手动将特征和标签堆叠成数组（类似于 torch.stack）
+            batch_features = np.array(batch_features)  # 转为 ndarray
+            batch_labels = np.array(batch_labels)      # 转为 ndarray
+
+            yield batch_features, batch_labels
+
+    def __len__(self):
+        # 返回 DataLoader 的长度
+        return (len(self.dataset) + self.batch_size - 1) // self.batch_size  # 向上取整
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='The training process')
     parser.add_argument('--data_path', default='', type=str)
@@ -229,175 +269,4 @@ if __name__ == '__main__':
     '''
     #print(training_x.shape)
     #print(training_y.shape)
-'''
-# 定义神经网络结构
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.datasets import make_classification
-from torch.utils.data import DataLoader, TensorDataset
-import numpy as np
-
-X, y = training_x, training_y.astype(int)
-
-# 计算每个类别的样本数量
-class_0_count = np.sum(y == 0)
-class_1_count = np.sum(y == 1)
-
-# 确定我们要增加的少数类样本数量
-# 这里我们使用复制的方式简单地进行过采样
-if class_0_count > class_1_count:
-    # 少数类是 1，复制少数类样本
-    minority_class_samples = X[y == 1]
-    minority_class_labels = y[y == 1]
-    num_samples_to_generate = class_0_count - class_1_count
-else:
-    # 少数类是 0，复制少数类样本
-    minority_class_samples = X[y == 0]
-    minority_class_labels = y[y == 0]
-    num_samples_to_generate = class_1_count - class_0_count
-
-# 随机复制少数类样本来增加样本数量
-additional_samples = minority_class_samples[np.random.choice(minority_class_samples.shape[0], num_samples_to_generate, replace=True)]
-additional_labels = minority_class_labels[np.random.choice(minority_class_labels.shape[0], num_samples_to_generate, replace=True)]
-
-# 组合过采样后的数据
-X_resampled = np.concatenate([X, additional_samples], axis=0)
-y_resampled = np.concatenate([y, additional_labels], axis=0)
-
-
-
-# 假设 X_resampled 是特征数据，y_resampled 是标签数据
-# 设置随机种子（用于控制结果的可重复性）
-random_state = 42
-np.random.seed(random_state)
-
-# 获取数据集的大小
-num_samples = X_resampled.shape[0]
-
-# 生成一个随机排列的索引
-indices = np.random.permutation(num_samples)
-
-# 划分训练集和测试集的样本数量
-test_size = 0.2
-test_samples = int(num_samples * test_size)
-train_samples = num_samples - test_samples
-
-# 根据随机索引分割数据集
-train_indices = indices[:train_samples]
-test_indices = indices[train_samples:]
-
-X_train = X_resampled[train_indices]
-y_train = y_resampled[train_indices]
-X_test = X_resampled[test_indices]
-y_test = y_resampled[test_indices]
-
-
-
-# 转换为 PyTorch 张量
-X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
-y_train_tensor = torch.tensor(y_train, dtype=torch.long)
-X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
-y_test_tensor = torch.tensor(y_test, dtype=torch.long)
-
-# 创建 DataLoader
-train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
-
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-
-# 神经网络定义
-class SimpleNN(nn.Module):
-    def __init__(self):
-        super(SimpleNN, self).__init__()
-        self.layer1 = nn.Linear(69, 128)
-        self.layer2 = nn.Linear(128, 64)
-        self.layer3 = nn.Linear(64, 32)
-        self.output = nn.Linear(32, 2)
-
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(0.5)
-
-    def forward(self, x):
-        x = self.relu(self.layer1(x))
-        x = self.dropout(self.relu(self.layer2(x)))
-        x = self.relu(self.layer3(x))
-        x = self.output(x)
-        return x
-
-model = SimpleNN()
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-
-# 训练模型
-num_epochs = 20
-
-for epoch in range(num_epochs):
-    model.train()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    all_preds = []
-    all_labels = []
-
-    for inputs, labels in train_loader:
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-
-        all_preds.extend(predicted.cpu().numpy())
-        all_labels.extend(labels.cpu().numpy())
-
-    # 计算 Precision 和 Recall
-    all_preds = torch.tensor(all_preds)
-    all_labels = torch.tensor(all_labels)
-
-    true_positive = ((all_preds == 1) & (all_labels == 1)).sum().item()
-    false_positive = ((all_preds == 1) & (all_labels == 0)).sum().item()
-    false_negative = ((all_preds == 0) & (all_labels == 1)).sum().item()
-
-    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
-    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
-
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(train_loader):.4f}, "
-          f"Accuracy: {100*correct/total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}")
-
-# 测试模型
-model.eval()
-correct = 0
-total = 0
-all_preds = []
-all_labels = []
-
-with torch.no_grad():
-    for inputs, labels in test_loader:
-        outputs = model(inputs)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-        all_preds.extend(predicted.cpu().numpy())
-        all_labels.extend(labels.cpu().numpy())
-
-all_preds = torch.tensor(all_preds)
-all_labels = torch.tensor(all_labels)
-
-true_positive = ((all_preds == 1) & (all_labels == 1)).sum().item()
-false_positive = ((all_preds == 1) & (all_labels == 0)).sum().item()
-false_negative = ((all_preds == 0) & (all_labels == 1)).sum().item()
-
-precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
-recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
-f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-
-print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
-'''
 
