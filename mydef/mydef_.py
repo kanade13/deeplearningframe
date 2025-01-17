@@ -202,7 +202,7 @@ def check(l: list):
 
 class Exp(Function):
     def forward(self, x):
-        x = x - np.max(x)
+        #x = x - np.max(x)
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
         x = self.inputs[0] 
