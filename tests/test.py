@@ -31,8 +31,6 @@ print(b)
 b.backward()
 print(a.grad)'''
 
-x=np.array([[1,2,3],[4,5,6]])
-print(x.sum(axis=1,keepdims=True))
 '''
 
 def sphere(x,y):
