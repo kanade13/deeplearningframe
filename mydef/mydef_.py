@@ -276,6 +276,13 @@ def rsub(x, y):
 class Mul(Function):
     def forward(self, x:np.ndarray, y:np.ndarray):
         self.x_shape, self.y_shape = x.shape, y.shape
+        '''
+        if np.any(np.isnan(x)) or np.any(np.isinf(x)):
+            print("Data x contains NaN or Inf.")
+        if np.any(np.isnan(y)) or np.any(np.isinf(y)):
+            print("Data y contains NaN or Inf.")
+        if np.any(np.isnan(x*y)) or np.any(np.isinf(x*y)):
+            print("Data x*y contains NaN or Inf.")'''
         return x * y
     def backward(self, gy:Variable):
         x, y = self.inputs[0],self.inputs[1]
@@ -688,7 +695,21 @@ class Layer:
                 yield from obj.params()
             else:
                 yield obj
-
+    def showparams(self):
+        for param in self.params():
+            print(f'{param.name}: {param.data}')
+    def showgrad(self):
+        for param in self.params():
+            print(f'{param.name}: {param.grad}')
+    def show_firstlast_grad(self):
+        count=0
+        for param in self.params():
+            count+=1
+        for i,param in enumerate(self.params()):
+            if i==0:
+                print(f'{param.name}: {param.grad}')
+            if i==count-1:
+                print(f'{param.name}: {param.grad}')
     def cleargrads(self):
         for param in self.params():
             param.cleargrad()
@@ -778,12 +799,24 @@ class Linear(Layer):
         #print('w.shape',self.W.data.shape)
 
     def forward(self, x):
+
         if self.W.data is None:
             self.in_size = x.shape[1]
             self.__init__W()
 
+        '''if isinstance(x,Variable):
+            print("x is Variable")
+        if isinstance(x,np.ndarray):
+            print("x is ndarray")'''
         y = linear(x, self.W, self.b)
-        #y = dropout(y)
+        y=y.data
+        '''
+        if isinstance(y,Variable):
+            print("y is Variable")
+        if isinstance(y,np.ndarray):
+            print("y is ndarray")'''
+        y = np.clip(y, -1e20, 1e20)
+        y = dropout(y)
         return y
 
 class Optimizer:
@@ -816,14 +849,9 @@ class SGD(Optimizer):
         self.vs = {}
 
     def update_one(self, param):
-        v_key = id(param)
-        if v_key not in self.vs:
-            self.vs[v_key] = np.zeros_like(param.data)
-
-        v = self.vs[v_key]
-        v *= self.momentum
-        v -= self.lr * param.grad.data
-        param.data += v
+        param.data -= self.lr * param.grad.data
+        # Clip the parameter values to be within the range [-1e20, 1e20]
+        param.data = np.clip(param.data, -1e10, 1e10)
     
 def accuracy(y, t):
     y, t = as_variable(y), as_variable(t)
@@ -981,13 +1009,14 @@ class ReLU(Function):
         y = np.maximum(x, 0.0)
         return y
     def backward(self, gy):
-        x = self.inputs[0]
+        x, = self.inputs
+        #print('x:',x)
         mask = x.data > 0
-        #print(mask)
+        #print('mask:',mask)
+        #print('gy:',gy)
         gx = gy * mask
-        gx = gx.data
-        gx[(gx)<1e-5] = 1e-5
-        return Variable(gx)
+        #gx = np.nan_to_num(x, nan=0, posinf=1e10, neginf=-1e10)
+        return gx
 def relu(x):
     return ReLU()(x)
 

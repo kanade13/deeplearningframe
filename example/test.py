@@ -203,26 +203,45 @@ test_loader = myDataLoader(test_dataset, batch_size=64, shuffle=False)
 
 # 定义模型
 class SimpleNN(Model):
-    def __init__(self):
+    def __init__(self,nb=False):
         super().__init__()
-        self.layer1 = Linear(out_size=128, in_size=69)
-        self.layer2 = Linear(out_size=64,in_size=128)
-        self.layer3 = Linear(out_size=32,in_size=64)
-        self.output = Linear(out_size=2,in_size=32)
-        #self.dropout = dropout(0.5)
+        self.layer1 = Linear(out_size=128, in_size=69,nobias=nb)
+        self.layer2 = Linear(out_size=64,in_size=128,nobias=nb)
+        self.layer3 = Linear(out_size=32,in_size=64,nobias=nb)
+        self.output = Linear(out_size=2,in_size=32,nobias=nb)
 
     def forward(self, x):
-        #x = sigmoid(self.layer1(x))
-        #x = sigmoid(self.layer2(x))
-        #x = sigmoid(self.layer3(x))
-        x = relu(self.layer1(x))
-        x = dropout(relu(self.layer2(x)))
-        x = relu(self.layer3(x))
-        x = self.output(x)
-        return x
+        x1 = relu(self.layer1(x))
+        if np.isnan(x1.data).any():
+            print('x',x)
+            print('x1',x1)
+            print('-----------------------------------------------------------')
+            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            print('layer1',self.layer1.showparams())
+        x2 = relu(self.layer2(x1))
+        if np.isnan(x2.data).any():
+            print('x',x1)
+            print('x2',x2)
+            print('-----------------------------------------------------------')
+            print('layer1',self.layer1.showparams())
+            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')            
+            print('layer2',self.layer2.showparams())
+        x3 = relu(self.layer3(x2))
+        if np.isnan(x3.data).any():
+            print('x',x)
+            print('layer3',self.layer3.showparams())
+        y = self.output(x3)
+        if np.isnan(y.data).any():
+            print('x3',x3)
+            print('y',y)
+            print('-----------------------------------------------------------')
+            print('output',self.output.showparams())
+            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            print('layer3',self.layer3.showparams())
+        return y
         
 
-model = SimpleNN()
+model = SimpleNN(nb=False)
 
 # 定义损失函数和优化器
 criterion =Soft_Cross_entropy()
@@ -234,6 +253,11 @@ num_epochs = 20
 batch_size = 64
 
 for epoch in range(num_epochs):
+    print("epoch",epoch)
+    print("--------------------")
+    #model.showparams()
+    model.show_firstlast_grad()
+    print("--------------------")
     model.cleargrads()
     permutation = np.random.permutation(X_train.shape[0])#X_train.shape[0] 表示训练数据集 X_train 的样本数量。通过调用 np.random.permutation(X_train.shape[0])，我们生成了一个长度与训练集样本数量相同的数组，其中包含了所有样本的索引，但这些索引的顺序是随机的。
                                                         #这个随机排列的索引数组通常用于打乱数据集，以确保在训练过程中每个批次的数据都是随机的，从而提高模型的泛化能力。通过这种方式，可以避免模型在训练过程中对数据的顺序产生依赖，从而提高模型的鲁棒性和性能。
@@ -243,22 +267,44 @@ for epoch in range(num_epochs):
     all_preds = []
     all_labels = []
 
+    count=0
     for inputs, labels in train_loader:
+        count+=1
         outputs = model(inputs)
+
         #print('outputs',outputs)
         #print('labels',labels)
+        
         loss = criterion(outputs, labels)
-        #print('loss',loss)
+        '''
+        if not np.isnan(loss.data) and not np.isinf(loss.data):
+            print(flag,f"Loss: {loss.data:.4f}")
+            flag+=1
+        else:
+            pass'''
+            #print(flag,f"Loss: {loss.data:.4f}")
+            #print('inputs',inputs)
+            #model.showparams()
+            #print('outputs',outputs)
+            #print('labels',labels)
         loss.backward()
+
         optimizer.update()
 
         epoch_loss += loss.data
+        #print("epoch",epoch,"loss",loss.data)
         predicted = np.argmax(outputs.data, axis=1)
         total += labels.shape[0]
         correct += np.sum(predicted == labels.data)
 
         all_preds.extend(predicted)
         all_labels.extend(labels.data)
+        # 打印每个参数层的梯度
+        print('count',count)
+        print('-----------------------------------------------------------')
+        model.showgrad()
+        model.showparams()
+        print('-----------------------------------------------------------')
 
     # 计算 Precision 和 Recall
     all_preds = np.array(all_preds)
