@@ -209,11 +209,15 @@ class SimpleNN(Model):
         self.layer2 = Linear(out_size=64,in_size=128)
         self.layer3 = Linear(out_size=32,in_size=64)
         self.output = Linear(out_size=2,in_size=32)
+        #self.dropout = dropout(0.5)
 
     def forward(self, x):
-        x = sigmoid(self.layer1(x))
-        x = sigmoid(self.layer2(x))
-        x = sigmoid(self.layer3(x))
+        #x = sigmoid(self.layer1(x))
+        #x = sigmoid(self.layer2(x))
+        #x = sigmoid(self.layer3(x))
+        x = relu(self.layer1(x))
+        x = dropout(relu(self.layer2(x)))
+        x = relu(self.layer3(x))
         x = self.output(x)
         return x
         

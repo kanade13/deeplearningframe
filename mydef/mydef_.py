@@ -217,10 +217,12 @@ def log2(base, x):#以base为底的对数
 
 class Log(Function):
     def forward(self, x):
+        x = np.clip(x, 1e-15, None)
         return np.log(x)
 
     def backward(self, gy):
         x = self.inputs[0]
+        x.data = np.clip(x.data ,1e-15, None)
         gx = gy / x
         return gx
 
@@ -502,8 +504,13 @@ class Sigmoid(Function):
         x = np.clip(x, -50, 50)
         o = 1 / (1+np.exp((-1) * x))
         gx = gy * o * (1-o)
+        gx = gx.data
+        zero_1 = (gx<1e-3) & (gx>0)
+        gx[zero_1] = 1e-3
+        zero_2 = (gx>-1e-3) & (gx<0)
+        gx[zero_2] = 1e-3
         o = None
-        return gx
+        return Variable(gx)
     
 def sigmoid(x):
     return Sigmoid()(x)
@@ -555,10 +562,13 @@ def softmax_simple(x: np.ndarray) -> np.ndarray:
     min_x = np.min(x)
     
     # 计算缩放因子
-    scale_factor = 10 / max(abs(max_x), abs(min_x))  # 缩放因子，避免溢出，确保最大值不超过500
+    #scale_factor = 10 / max(abs(max_x)+1e-15, abs(min_x)+1e-15)  # 缩放因子，避免溢出，确保最大值不超过500
     
+
     # 对输入进行缩放
-    x_scaled = x * scale_factor
+    #x_scaled = x * scale_factor
+    #x_scaled = np.arctan(x) * 20 / np.pi
+    x_scaled = x
 
     # 如果是二维数组（batch情况）
     if x_scaled.ndim == 2:
@@ -573,7 +583,7 @@ def softmax_simple(x: np.ndarray) -> np.ndarray:
         sum_y = np.sum(y)
     
     # 返回 softmax 结果
-    return y / sum_y
+    return y / (sum_y + 1e-6)
 
 class Soft_Cross_entropy(Function):#二分类交叉熵
     def forward(self, x, t):#在本框架中t为一个0-1的标签(一个值),所以在backward中我使用了t=(t,1-t)
@@ -590,7 +600,7 @@ class Soft_Cross_entropy(Function):#二分类交叉熵
         """
 
         a = softmax_simple(x)  # 计算 softmax 概率分布
-        a.clip(1e-3, 1 - 1e-3)  # 防止 log(0) 的发生
+        a = np.clip(a, 1e-10, 1 - 1e-10)  # 防止 log(0) 的发生
         #print('a:',a)
         #print('a.shape:',a.shape)
         
@@ -746,7 +756,7 @@ class MLP(Model):
 
 
 class Linear(Layer):
-    def __init__(self, out_size, nobias=False, dtype=np.float32, in_size=None):
+    def __init__(self, out_size, nobias=False, dtype=np.float64, in_size=None):
         super().__init__()
         self.in_size = in_size
         self.out_size = out_size
@@ -773,7 +783,7 @@ class Linear(Layer):
             self.__init__W()
 
         y = linear(x, self.W, self.b)
-        y = dropout(y)
+        #y = dropout(y)
         return y
 
 class Optimizer:
@@ -799,12 +809,21 @@ class Optimizer:
         raise NotImplementedError()
 
 class SGD(Optimizer):
-    def __init__(self, lr=0.01):
+    def __init__(self, lr=0.01, momentum=0.9):
         super().__init__()
         self.lr = lr
+        self.momentum = momentum
+        self.vs = {}
 
     def update_one(self, param):
-        param.data -= self.lr * param.grad.data
+        v_key = id(param)
+        if v_key not in self.vs:
+            self.vs[v_key] = np.zeros_like(param.data)
+
+        v = self.vs[v_key]
+        v *= self.momentum
+        v -= self.lr * param.grad.data
+        param.data += v
     
 def accuracy(y, t):
     y, t = as_variable(y), as_variable(t)
@@ -827,13 +846,14 @@ def evaluate(y, t):#计算precision,recall和f_score
     for i in range(len(y)):
         #print('pred:',pred[i])
         #print('t:',t[i])
-        if pred[i] == t[i] and pred[i] == 1:
+        a = np.argmax(pred[i])
+        if a == t[i] and a == 1:
             tp = tp + 1
-        if pred[i] == 0 and t[i] == 1:
+        if a == 0 and t[i] == 1:
             fn = fn + 1
-        if pred[i] == 1 and t[i] == 0:
+        if a == 1 and t[i] == 0:
             fp = fp + 1
-        if pred[i] == 0 and t[i] == 0:
+        if a == 0 and t[i] == 0:
             tn = tn + 1
     print("tp=",tp)
     print("fp=",fp)
@@ -961,10 +981,13 @@ class ReLU(Function):
         y = np.maximum(x, 0.0)
         return y
     def backward(self, gy):
-        x, = self.inputs
+        x = self.inputs[0]
         mask = x.data > 0
+        #print(mask)
         gx = gy * mask
-        return gx
+        gx = gx.data
+        gx[(gx)<1e-5] = 1e-5
+        return Variable(gx)
 def relu(x):
     return ReLU()(x)
 
