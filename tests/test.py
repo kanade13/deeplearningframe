@@ -215,8 +215,8 @@ hidden_size = 10
 model=MLP([hidden_size,hidden_size,1])
 optimizer = SGD(lr).setup(model)
 
-if os.path.exists('my_mlp.npz'):
-    model.load_weights('my_mlp.npz')
+#if os.path.exists('my_mlp.npz'):
+#    model.load_weights('my_mlp.npz')
 
 for i in range(max_iters):
     model.cleargrads()
@@ -232,8 +232,9 @@ plt.figure(figsize=(8, 6))
 plt.scatter(x, y, label="Data Points", color="blue", alpha=0.6)  # 数据点
 x_fit = np.linspace(0, 1, 100).reshape(-1, 1)
 y_fit = model(x_fit)  # 拟合曲线
-
-plt.plot(x_fit, y_fit.data.reshape(-1), label="Fitted Curve", color="red", linewidth=2)  # 拟合曲线
+print(x.shape)
+print(y_fit.shape)
+plt.scatter(x_fit, y_fit.data.reshape(-1), label="Fitted Curve", color="red")#, linewidth=2)  # 拟合曲线
 plt.xlabel("x")
 plt.ylabel("y")
 plt.title("Data Points and Fitted Curve")
@@ -241,6 +242,7 @@ plt.legend()
 plt.show()
 
 model.save_weights('my_mlp.npz')
+
 '''
 
 

@@ -434,7 +434,7 @@ def matmul(x, W):
 class MeanSquareError(Function):
     def forward(self, x0, x1):
         diff = x0 - x1 
-        y = 10*(diff ** 2).sum() / len(diff)
+        y = (diff ** 2).sum() / len(diff)
         return y
     
     def backward(self ,gy):
@@ -442,7 +442,7 @@ class MeanSquareError(Function):
         diff = x0 - x1
         gx0 = gy * diff *(2. / len(diff))
         gx1 = -gx0
-        return 10*gx0, 10*gx1
+        return gx0, gx1
     
 def meansquarederror(x0 ,x1):
     return MeanSquareError()(x0, x1)
