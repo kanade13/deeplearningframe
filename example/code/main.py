@@ -12,6 +12,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import matplotlib.pyplot as plt
 np.set_printoptions(threshold=20)
 import config
+from sklearn.feature_selection import SelectKBest, mutual_info_classif, chi2
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 class kanade(Model):
     def __init__(self, input_size, hidden_size1,hidden_size2, output_size):
         super().__init__()
@@ -48,31 +52,53 @@ class kanade(Model):
             loss=weighting_mean_square_error()(y_pred,y,w)
             loss.backward()
             optimizer.update()
+            '''
             if epoch == 10:
                 optimizer.lr = 0.0001
             if epoch == 20:
+                optimizer.lr = 0.00005
+            if epoch == 30:
                 optimizer.lr = 0.00001
+            if epoch == 40:
+                optimizer.lr = 0.000005'''
+            
+            '''
+            if epoch == 20:
+                optimizer.lr = 0.001
+            if epoch == 40:
+                optimizer.lr = 0.0005
+            if epoch == 60:
+                optimizer.lr = 0.0001
+            if epoch == 80:
+                optimizer.lr = 0.00005
+            if epoch == 100:
+                optimizer.lr = 0.00001'''
+            if epoch == 50:
+                optimizer.lr = 0.001
             print(f'Epoch {epoch}, Loss: {loss.data}')
         #对y_pred排序
         sorted_pred = np.sort(y_pred.data)[::-1]
-        s=sorted_pred[6257]
-        print('s:',s)
-        for i in range(6250,6300):
-            print(sorted_pred[i])
-        y_pred.data = np.where(y_pred.data > 0.3, 1, 0)
-
+        print('sorted_pred.shape:',sorted_pred.shape)
+        #统计训练集中的正样本数
+        positive_num = int(np.sum(y.data))
+        print('positive_num:',positive_num)
+        self.threshold = sorted_pred[positive_num]
+    
+    def evaluate(self, test_x, test_y):
         # 评估模型性能
-        accuracy,precision,recall,f1_score=evaluate(y_pred, y)
+        y_pred = self.forward(test_x)
+        y_pred.data = np.where(y_pred.data >self.threshold, 1, 0)
+        accuracy,precision,recall,f1_score=evaluate(y_pred, test_y)
         #f1 = f1_score(y_pred, y)
         print(f'Accuracy: {accuracy}, Recall: {recall}, Precision: {precision}, F1 Score: {f1_score}')
-
+        '''
         plt.figure(figsize=(8, 6))
         plt.plot(range(epochs), losses, label="Loss", color="blue")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.title("Training Loss Over Epochs")
         plt.legend()
-        plt.show()
+        plt.show()'''
         # 保存模型
         #self.save_model('model_weights.npy')
 
@@ -150,6 +176,28 @@ if __name__ == '__main__':
             2. the model performance (recall, precision, f1_score) on the training dataset
             3. save the final model
     '''
+    #从中随机挑出10%作为测试集,90%作为训练集
+    training_x, test_x, training_y, test_y = train_test_split(training_x, training_y, test_size=0.1, random_state=42)
+    # 方法1：单变量选择（互信息）
+    '''
+    selector = SelectKBest(score_func=mutual_info_classif, k=8)  # 选择20个最佳特征
+    selector.fit(training_x, training_y)
+    feature_scores = selector.scores_
+    top_k_indices = np.argsort(feature_scores)[-8:]  # 得分最高的 k 个特征索引
+    # 输出互信息最高的特征维度索引和得分
+    print("Top k Feature Indices (1-based):", top_k_indices + 1)
+    print("Top k Feature Scores:", feature_scores[top_k_indices])
+    '''
+
+# 构造新特征矩阵，仅保留前 k 个特征
+    top_k_indices = [10,42,26,58,0,1,2,3]
+    X_new = training_x[:, top_k_indices]
+    '''
+    for i in range(len(feature_scores)):
+        print(f'Feature {i}: {feature_scores[i]}')
+    '''
+    #X_new = selector.fit_transform(training_x, training_y)
+    print(X_new.shape)
     #print(config.Config.input_size)
     #print(config.Config.hidden_size)
     #print(config.Config.output_size)
@@ -162,11 +210,12 @@ if __name__ == '__main__':
     for i in range(leny):
         if training_y[i] == 1:
             p.append(i)
-            w[i] = (negative_num / positive_num)/4
+            w[i] = (negative_num / positive_num)/5
         else:
             w[i] = 1
     kanade_model = kanade(config.Config.input_size, config.Config.hidden_size1,config.Config.hidden_size2,config.Config.output_size)
-    kanade_model.training(Variable(training_x), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate,weight=w)
+    kanade_model.training(Variable(X_new), Variable(training_y), config.Config.num_epochs, config.Config.learning_rate,weight=w)
+    kanade_model.evaluate(Variable(X_new), Variable(training_y))
     #kanade_model.save_model(config_.Config.save_model_path)
     print('completed!')
 '''
