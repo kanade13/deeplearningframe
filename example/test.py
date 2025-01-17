@@ -9,6 +9,7 @@ from mydef import Variable, Linear, Model, SGD, meansquarederror, sigmoid, evalu
 import random
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import argparse
@@ -22,12 +23,14 @@ np.set_printoptions(threshold=20)
 from sklearn.datasets import make_classification
 import numpy as np
 import random
+
+'''
 class dataset():
     def __init__(self, data_path: str):
         self.data_path = data_path
     
     def data_collection(self):
-        '''
+        
             Parameter
             ---------
             data_path: the input data path, which can be a folder or a npy file 
@@ -36,7 +39,7 @@ class dataset():
             ------
             x: the training features, with shape of (N, 69), N is the sample size
             y: the training lables, with shape of (N, 1), N is the sample size
-        '''
+        
         def normalization(x):
             def normalize(vector):
                 max_vals = np.max(vector, axis=0)
@@ -134,6 +137,10 @@ print(f'the training labels of the circuits are: {training_y} with shape of {tra
 # 这里用 make_classification 创建一个示例数据集
 X, y = training_x, training_y
 
+np.random.seed(0)
+X = np.random.rand(100, 1)
+y = np.sin(2 * np.pi * x) + np.random.rand(100, 1)
+
 # 假设 X 是数据集，y 是标签
 # 计算每个特征的均值和标准差
 mean = np.mean(X, axis=0)  # 对每一列计算均值
@@ -190,35 +197,38 @@ X_train = X_resampled[train_indices]
 y_train = y_resampled[train_indices]
 X_test = X_resampled[test_indices]
 y_test = y_resampled[test_indices]
-'''
+
 # 转换为 Variable
 X_train = Variable(X_train)
 y_train = Variable(y_train)
 X_test = Variable(X_test)
-y_test = Variable(y_test)'''
+y_test = Variable(y_test)
 train_dataset = myDataset(X_train, y_train)
 test_dataset = myDataset(X_test, y_test)
 train_loader = myDataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = myDataLoader(test_dataset, batch_size=64, shuffle=False)
 
-# 定义模型
-class SimpleNN(Model):
+# 定义模型'''
+'''class SimpleNN(Model):
     def __init__(self,nb=False):
         super().__init__()
-        self.layer1 = Linear(out_size=128, in_size=69,nobias=nb)
+        self.layer1 = Linear(out_size=128, in_size=1,nobias=nb)
         self.layer2 = Linear(out_size=64,in_size=128,nobias=nb)
         self.layer3 = Linear(out_size=32,in_size=64,nobias=nb)
-        self.output = Linear(out_size=2,in_size=32,nobias=nb)
+        self.output = Linear(out_size=1,in_size=32,nobias=nb)
 
     def forward(self, x):
-        x1 = relu(self.layer1(x))
+        #x1 = relu(self.layer1(x))
+        x1 = sigmoid(self.layer1(x))
+        #print('x1:',x1.shape)
         if np.isnan(x1.data).any():
             print('x',x)
             print('x1',x1)
             print('-----------------------------------------------------------')
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             print('layer1',self.layer1.showparams())
-        x2 = relu(self.layer2(x1))
+        #x2 = relu(self.layer2(x1))
+        x2 = sigmoid(self.layer2(x1))
         if np.isnan(x2.data).any():
             print('x',x1)
             print('x2',x2)
@@ -226,7 +236,8 @@ class SimpleNN(Model):
             print('layer1',self.layer1.showparams())
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')            
             print('layer2',self.layer2.showparams())
-        x3 = relu(self.layer3(x2))
+        #x3 = relu(self.layer3(x2))
+        x3 = sigmoid(self.layer3(x2))
         if np.isnan(x3.data).any():
             print('x',x)
             print('layer3',self.layer3.showparams())
@@ -240,11 +251,42 @@ class SimpleNN(Model):
             print('layer3',self.layer3.showparams())
         return y
         
+'''
+np.random.seed(0)
+x = np.random.rand(100, 1)
+y = np.sin(2 * np.pi * x) + np.random.rand(100, 1)
+lr = 0.2
+max_iter = 10000
+hidden_size = 10
+model = MLP((hidden_size, hidden_size, 1))
+optimizer = SGD(lr)
+optimizer.setup(model)
+# 或者使用下一行统一进行设置
+# optimizer = optimizers.SGD(lr).setup(model)
+for i in range(max_iter):
+    y_pred = model(x)
+    loss = meansquarederror(y, y_pred)
+    model.cleargrads()
+    loss.backward()
+    optimizer.update()
+    if i % 1000 == 0:
+        print(loss)
+y_pred = model(x)
+print(y_pred.shape)
+# 绘制数据点与拟合曲线
+plt.figure(figsize=(8, 6))
+plt.scatter(x, y, label="True Data", color="blue", alpha=0.5)  # 绘制数据点
+plt.scatter(x, y_pred.data, label="Fitted Curve", color="red")#, linewidth=2)  # 绘制拟合曲线
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.title('Data Points and Fitted Curve')
+plt.legend()
+plt.show()
 
-model = SimpleNN(nb=False)
-
+'''
 # 定义损失函数和优化器
-criterion =Soft_Cross_entropy()
+#criterion =Soft_Cross_entropy()
+criterion = MeanSquareError()
 optimizer = SGD(lr=1)
 optimizer.setup(model)
 
@@ -276,12 +318,12 @@ for epoch in range(num_epochs):
         #print('labels',labels)
         
         loss = criterion(outputs, labels)
-        '''
+        
         if not np.isnan(loss.data) and not np.isinf(loss.data):
             print(flag,f"Loss: {loss.data:.4f}")
             flag+=1
         else:
-            pass'''
+            pass
             #print(flag,f"Loss: {loss.data:.4f}")
             #print('inputs',inputs)
             #model.showparams()
@@ -346,5 +388,5 @@ recall = true_positive / (true_positive + false_negative) if (true_positive + fa
 f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
 print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
-
+'''
 

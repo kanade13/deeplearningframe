@@ -274,4 +274,3 @@ recall = true_positive / (true_positive + false_negative) if (true_positive + fa
 f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
 print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
-

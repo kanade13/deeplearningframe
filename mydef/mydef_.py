@@ -493,7 +493,7 @@ def linear(x, W, b=None):
 class Sigmoid(Function):
     def forward(self, x):
         #print(x)    
-        x = np.clip(x, -50, 50)
+        #x = np.clip(x, -50, 50)
         y = 1 / (1+np.exp((-1) * x))
         #print("y:",y)
         return y
@@ -508,7 +508,7 @@ class Sigmoid(Function):
         # 确保 outputs 是数值类型
         #outputs = np.array(outputs, dtype=float)
         x = self.inputs[0].data
-        x = np.clip(x, -50, 50)
+        #x = np.clip(x, -50, 50)
         o = 1 / (1+np.exp((-1) * x))
         gx = gy * o * (1-o)
         gx = gx.data
@@ -770,7 +770,7 @@ class MLP(Model):
             self.layers.append(layer)
 
     def forward(self, x):
-        for l in self.layers[0 : -1]:
+        for l in self.layers[ : -1]:
             x = self.activation(l(x))
         return self.layers[-1](x)
 
@@ -809,14 +809,14 @@ class Linear(Layer):
         if isinstance(x,np.ndarray):
             print("x is ndarray")'''
         y = linear(x, self.W, self.b)
-        y=y.data
+        #y=y.data
         '''
         if isinstance(y,Variable):
             print("y is Variable")
         if isinstance(y,np.ndarray):
             print("y is ndarray")'''
-        y = np.clip(y, -1e20, 1e20)
-        y = dropout(y)
+        #y = np.clip(y, -1e20, 1e20)
+        #y = dropout(y)
         return y
 
 class Optimizer:
@@ -842,6 +842,13 @@ class Optimizer:
         raise NotImplementedError()
 
 class SGD(Optimizer):
+    def __init__(self, lr=0.01):
+        super().__init__()
+        self.lr = lr
+    def update_one(self, param):
+        param.data -= self.lr * param.grad.data
+
+class momentumSGD(Optimizer):
     def __init__(self, lr=0.01, momentum=0.9):
         super().__init__()
         self.lr = lr
