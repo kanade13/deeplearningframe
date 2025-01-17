@@ -6,7 +6,7 @@ from mydef import *
 import matplotlib.pyplot as plt
 #from mydef import as_variable
 import utils
-
+'''
 a=Variable(np.random.uniform(-1, 1, size=(50000)).astype(np.float32))
 t=np.random.randint(0, 2, size=(50000))
 #print(a)
@@ -14,7 +14,7 @@ t=np.random.randint(0, 2, size=(50000))
 b=softmax_cross_entropy_simple(a,t)
 print(b)
 b.backward()
-print(a.grad)
+print(a.grad)'''
 '''
 x=np.array([[1,2,3],[4,5,6]])
 print(x.sum(axis=0,keepdims=True))'''
@@ -204,7 +204,7 @@ z.backward()
 print(x.grad)
 '''
 
-'''
+
 np.random.seed(0)
 x = np.random.rand(100,1)
 y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
@@ -212,7 +212,7 @@ y = np.sin(2 * np.pi * x) + np.random.rand(100,1)
 lr = 0.2
 max_iters = 10000
 hidden_size = 10
-model=MLP([hidden_size,hidden_size,hidden_size,1])
+model=MLP([hidden_size,hidden_size,1])
 optimizer = SGD(lr).setup(model)
 
 if os.path.exists('my_mlp.npz'):
@@ -240,8 +240,9 @@ plt.title("Data Points and Fitted Curve")
 plt.legend()
 plt.show()
 
-model.save_weights('my_mlp.npz')'''
+model.save_weights('my_mlp.npz')
 '''
+
 
 
 
