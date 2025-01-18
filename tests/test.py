@@ -11,6 +11,9 @@ import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import argparse
 import sys
+from imblearn.over_sampling import SMOTE
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 #将mydef文件夹加入环境变量
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 #from mydef import *
@@ -32,8 +35,8 @@ import numpy as np
 
 from sklearn.metrics import precision_score, recall_score
 
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
+#os.environ["OMP_NUM_THREADS"] = "1"
+#os.environ["MKL_NUM_THREADS"] = "1"
 
 
 
@@ -98,7 +101,7 @@ if __name__ == '__main__':
 # 假设你有一个数据集 X (形状: [样本数, 特征数]) 和 y (形状: [样本数])
 # 这里用 make_classification 创建一个示例数据集
 X, y = training_x, training_y
-
+'''
 # 假设 X 是数据集，y 是标签
 # 计算每个特征的均值和标准差
 mean = np.mean(X, axis=0)  # 对每一列计算均值
@@ -131,16 +134,17 @@ additional_labels = minority_class_labels[np.random.choice(minority_class_labels
 # 组合过采样后的数据
 X_resampled = np.concatenate([X, additional_samples], axis=0)
 y_resampled = np.concatenate([y, additional_labels], axis=0)
+'''
 
-
-
+'''
 # 假设 X_resampled 是特征数据，y_resampled 是标签数据
 # 设置随机种子（用于控制结果的可重复性）
 random_state = 42
 np.random.seed(random_state)
 
 # 获取数据集的大小
-num_samples = X_resampled.shape[0]
+# num_samples = X_resampled.shape[0]
+num_samples = X.shape[0]
 
 # 生成一个随机排列的索引
 indices = np.random.permutation(num_samples)
@@ -159,7 +163,10 @@ y_train = y_resampled[train_indices]
 X_test = X_resampled[test_indices]
 y_test = y_resampled[test_indices]
 
-
+X_train = X[train_indices]
+y_train = y[train_indices]
+X_test = X[test_indices]
+y_test = y[test_indices]
 
 # 转换为 PyTorch 张量
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
@@ -172,7 +179,7 @@ train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
 test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)'''
 
 # 神经网络定义
 class SimpleNN(nn.Module):
@@ -185,23 +192,51 @@ class SimpleNN(nn.Module):
 
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.relu(self.layer1(x))
         x = self.dropout(self.relu(self.layer2(x)))
+        #x = self.relu(self.layer2(x))
         x = self.relu(self.layer3(x))
         x = self.output(x)
         #x = torch.sigmoid(self.layer1(x))
         #x = self.dropout(torch.sigmoid(self.layer2(x)))
+        #x = torch.sigmoid(self.layer2(x))
         #x = torch.sigmoid(self.layer3(x))
         #x = self.output(x)
         return x
 
+X ,y = training_x, training_y
+
+# Split your dataset into train/test sets (optional, depending on your setup)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Apply SMOTE on the training data to handle class imbalance
+smote = SMOTE(sampling_strategy='auto', random_state=42)  # 'auto' will balance the dataset
+X_res, y_res = smote.fit_resample(X_train, y_train)
+
+# Normalize the data (this is important for neural networks)
+scaler = StandardScaler()
+X_res = scaler.fit_transform(X_res)
+X_test = scaler.transform(X_test)
+
+# Convert the resampled data into PyTorch tensors
+X_res_tensor = torch.tensor(X_res, dtype=torch.float32)
+y_res_tensor = torch.tensor(y_res, dtype=torch.long)
+X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
+y_test_tensor = torch.tensor(y_test, dtype=torch.long)
+
+train_dataset = TensorDataset(X_res_tensor, y_res_tensor)
+test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
+
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+
+# Instantiate the model, loss function, and optimizer
 model = SimpleNN()
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-
+criterion = nn.CrossEntropyLoss()  # Cross entropy is typically used for classification
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 # 训练模型
 num_epochs = 20
 
