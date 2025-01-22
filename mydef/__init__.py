@@ -21,6 +21,6 @@ from .mydef_ import Soft_Cross_entropy,softmax_simple
 from .mydef_ import log,add,sub,mul,div,neg,pow
 from .mydef_ import matmul,MatMul,linear
 #from .mydef_ import weighting_mean_square_error
-__all__ = ['linear','log','softmax_simple','Soft_Cross_entropy','soft_cross_entropy','relu','dropout','Config','PCA','VIF','correlation','copypositive','characteristic','sigmoid','Model','evaluate','softmax_cross_entropy_simple','linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
+__all__ = ['linear','log','Layer','softmax_simple','Soft_Cross_entropy','soft_cross_entropy','relu','dropout','Config','PCA','VIF','correlation','copypositive','characteristic','sigmoid','Model','evaluate','softmax_cross_entropy_simple','linear_simple','Linearf','Div','Mul','Log','Linear','MeanSquareError','Add','Variable', 'square', 'Square', 'Exp','exp','numerical_diff','Function','Config','setup_variable','Transpose','Reshape','BroadcastTo','SumTo','Sum','MatMul','meansquarederror','Sigmoid','GetItem','GetItemGrad','Optimizer','SGD','MLP','TwoLayerNet','Pow']
 'weighting_mean_square_error'
 setup_variable()#设置Variable类的属性

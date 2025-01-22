@@ -9,6 +9,7 @@ from mydef import Variable, Linear, Model, SGD, meansquarederror, sigmoid, evalu
 import random
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import argparse
@@ -22,12 +23,14 @@ np.set_printoptions(threshold=20)
 from sklearn.datasets import make_classification
 import numpy as np
 import random
+
+'''
 class dataset():
     def __init__(self, data_path: str):
         self.data_path = data_path
     
     def data_collection(self):
-        '''
+        
             Parameter
             ---------
             data_path: the input data path, which can be a folder or a npy file 
@@ -36,7 +39,7 @@ class dataset():
             ------
             x: the training features, with shape of (N, 69), N is the sample size
             y: the training lables, with shape of (N, 1), N is the sample size
-        '''
+        
         def normalization(x):
             def normalize(vector):
                 max_vals = np.max(vector, axis=0)
@@ -190,12 +193,12 @@ X_train = X_resampled[train_indices]
 y_train = y_resampled[train_indices]
 X_test = X_resampled[test_indices]
 y_test = y_resampled[test_indices]
-'''
+
 # 转换为 Variable
-X_train = Variable(X_train)
-y_train = Variable(y_train)
-X_test = Variable(X_test)
-y_test = Variable(y_test)'''
+X_train = X_train
+y_train = y_train
+X_test = X_test
+y_test = y_test
 train_dataset = myDataset(X_train, y_train)
 test_dataset = myDataset(X_test, y_test)
 train_loader = myDataLoader(train_dataset, batch_size=64, shuffle=True)
@@ -211,7 +214,12 @@ class SimpleNN(Model):
         self.output = Linear(out_size=2,in_size=32,nobias=nb)
 
     def forward(self, x):
-        x1 = relu(self.layer1(x))
+        x = Variable(x)
+        x1 = self.layer1(x)
+        print('x1:',x1)
+        x1 = relu(x1)
+        #x1 = sigmoid(self.layer1(x))
+        #print('x1:',x1.shape)
         if np.isnan(x1.data).any():
             print('x',x)
             print('x1',x1)
@@ -219,6 +227,7 @@ class SimpleNN(Model):
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
             print('layer1',self.layer1.showparams())
         x2 = relu(self.layer2(x1))
+        #x2 = sigmoid(self.layer2(x1))
         if np.isnan(x2.data).any():
             print('x',x1)
             print('x2',x2)
@@ -227,6 +236,7 @@ class SimpleNN(Model):
             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')            
             print('layer2',self.layer2.showparams())
         x3 = relu(self.layer3(x2))
+        #x3 = sigmoid(self.layer3(x2))
         if np.isnan(x3.data).any():
             print('x',x)
             print('layer3',self.layer3.showparams())
@@ -240,17 +250,18 @@ class SimpleNN(Model):
             print('layer3',self.layer3.showparams())
         return y
         
-
-model = SimpleNN(nb=False)
-
+model = SimpleNN()
 # 定义损失函数和优化器
-criterion =Soft_Cross_entropy()
+#criterion =Soft_Cross_entropy()
+#criterion = MeanSquareError()
+criterion = jihuohanshu()
 optimizer = SGD(lr=1)
 optimizer.setup(model)
 
 # 训练模型
 num_epochs = 20
 batch_size = 64
+lam = 1e-6
 
 for epoch in range(num_epochs):
     print("epoch",epoch)
@@ -276,12 +287,15 @@ for epoch in range(num_epochs):
         #print('labels',labels)
         
         loss = criterion(outputs, labels)
-        '''
-        if not np.isnan(loss.data) and not np.isinf(loss.data):
-            print(flag,f"Loss: {loss.data:.4f}")
-            flag+=1
-        else:
-            pass'''
+        #loss = meansquarederror(y, y_pred)
+        for param in model.params():
+            loss = loss + regularization(param) * lam
+        
+        #if not np.isnan(loss.data) and not np.isinf(loss.data):
+            #print(flag,f"Loss: {loss.data:.4f}")
+            #flag+=1
+        #else:
+            #pass
             #print(flag,f"Loss: {loss.data:.4f}")
             #print('inputs',inputs)
             #model.showparams()
@@ -300,11 +314,11 @@ for epoch in range(num_epochs):
         all_preds.extend(predicted)
         all_labels.extend(labels.data)
         # 打印每个参数层的梯度
-        print('count',count)
-        print('-----------------------------------------------------------')
-        model.showgrad()
-        model.showparams()
-        print('-----------------------------------------------------------')
+        #print('count',count)
+        #print('-----------------------------------------------------------')
+        #model.showgrad()
+        #model.showparams()
+        #print('-----------------------------------------------------------')
 
     # 计算 Precision 和 Recall
     all_preds = np.array(all_preds)
@@ -348,3 +362,119 @@ f1_score = 2 * precision * recall / (precision + recall) if (precision + recall)
 print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
 
 
+'''
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return sigmoid(x) * (1 - sigmoid(x))
+
+# 损失函数（交叉熵损失）
+def binary_cross_entropy(y_true, y_pred):
+    # 避免数值问题加上一个小常数 epsilon
+    epsilon = 1e-10
+    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+    return -np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+
+# 损失函数的导数
+def binary_cross_entropy_derivative(y_true, y_pred):
+    epsilon = 1e-10
+    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+    return (y_pred - y_true) / (y_pred * (1 - y_pred))
+
+def mean_squared_error(y_true, y_pred):
+    return np.mean((y_true - y_pred) ** 2)
+
+# 损失函数的导数
+def mean_squared_error_derivative(y_true, y_pred):
+    return 2 * (y_pred - y_true) / y_true.shape[0]
+
+class kanade(Model):
+    def __init__(self, input_size, hidden_sizes, output_size):
+        self.weights = []
+        self.biases = []
+
+        # 初始化权重和偏置
+        layer_sizes = [input_size] + hidden_sizes + [output_size]
+        for i in range(len(layer_sizes) - 1):
+            self.weights.append(np.random.randn(layer_sizes[i], layer_sizes[i + 1]) * 0.1)
+            self.biases.append(np.zeros((1, layer_sizes[i + 1])))
+
+    def forward(self, X):
+        self.z = []  # 线性变换 z = WX + b
+        self.a = [X]  # 激活值 a
+        for i in range(len(self.weights)):
+            z = np.dot(self.a[-1], self.weights[i]) + self.biases[i]
+            a = sigmoid(z) if i < len(self.weights) - 1 else z  # 隐藏层用 sigmoid，输出层线性
+            self.z.append(z)
+            self.a.append(a)
+        return self.a[-1]
+
+    def backward(self, X, y, learning_rate):
+        m = X.shape[0]  # 样本数量
+        y_pred = self.a[-1]
+        # 计算输出层的梯度
+        delta = mean_squared_error_derivative(y, y_pred)
+
+        # 反向传播
+        for i in reversed(range(len(self.weights))):
+            grad_w = np.dot(self.a[i].T, delta) / m
+            grad_b = np.sum(delta, axis=0, keepdims=True) / m
+            if i > 0:
+                delta = np.dot(delta, self.weights[i].T) * sigmoid_derivative(self.z[i - 1])
+
+            # 更新权重和偏置
+            self.weights[i] -= learning_rate * grad_w
+            self.biases[i] -= learning_rate * grad_b
+
+    def training(self, X, y, epochs, learning_rate):
+        for epoch in range(epochs):
+            # 前向传播
+            y_pred = self.forward(X)
+            # 计算损失
+            loss = mean_squared_error(y, y_pred)
+            # 反向传播
+            self.backward(X, y, learning_rate)
+            #if (epoch + 1) % 5 == 0 or epoch == 0:
+            print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}")
+
+np.random.seed(0)
+x = np.random.rand(100, 1)
+y = np.sin(2 * np.pi * x) + np.random.rand(100, 1)
+lr = 0.2
+max_iter = 4000
+hidden_size = 10
+lam = 0.005
+model = kanade(1,[10],1)
+model.training()
+#model = MLP((hidden_size, hidden_size, 1),activation=jihuohanshu)
+#optimizer = SGD(lr)
+#optimizer.setup(model)
+# 或者使用下一行统一进行设置
+# optimizer = optimizers.SGD(lr).setup(model)
+'''for i in range(max_iter):
+    y_pred = model(x)
+    loss = meansquarederror(y, y_pred)
+    #for param in model.params():
+    #    loss = loss + regularization(param) * lam
+    model.cleargrads()
+    loss.backward()
+    optimizer.update()
+    if i % 1000 == 0:
+        print(loss)
+model.showparams()
+
+x_pred = np.linspace(0,1,100)
+x_pred = x_pred[:,np.newaxis]
+y_pred = model(x_pred)
+print(y_pred.shape)
+# 绘制数据点与拟合曲线
+plt.figure(figsize=(8, 6))
+plt.scatter(x, y, label="True Data", color="blue", alpha=0.5)  # 绘制数据点
+plt.plot(x_pred, y_pred.data, label="Fitted Curve", color="red", linewidth=2)  # 绘制拟合曲线
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.title('Data Points and Fitted Curve')
+plt.legend()
+plt.show()
+'''

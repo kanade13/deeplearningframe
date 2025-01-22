@@ -15,9 +15,6 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 
 if __name__ == '__main__':
-    x=Variable(np.array([[0.2,0.3],[0.3,0.5],[0.1,0.4]]))
+    x=Variable(np.array([[-0.2,0.3],[-0.3,0.5],[-0.1,0.4]]))#0.6224,0.3100,0.6224
     t=Variable(np.array([1,0,1]))
-    y=Soft_Cross_entropy()(x,t)
-    print(y)
-    y.backward()
-    print(x.grad)
+    

@@ -35,9 +35,11 @@ class kanade(Model):
     def forward(self, x):
         h = self.fc1(x)
         #print('h.shape',h.shape)
-        h = sigmoid(h)
+        #h = sigmoid(h)
+        h = relu(h)
         y = self.fc2(h)
-        y = sigmoid(y)
+        #y = sigmoid(y)
+        y = relu(y)
         y = self.fc3(y)
         #print('y.shape',y.shape)
         return y
@@ -59,8 +61,8 @@ class kanade(Model):
             
             
             #如果y_pred和y的shape不一样，需要对y_pred进行reshape
-            if y_pred.shape != y.shape:
-                y_pred = y_pred.reshape(y.shape)
+            #if y_pred.shape != y.shape:
+            #    y_pred = y_pred.reshape(y.shape)
             #print('y_pred.shape',y_pred.shape)
             #print('y.shape',y.shape)
             loss = soft_cross_entropy(y_pred, y)

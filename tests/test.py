@@ -191,6 +191,10 @@ class SimpleNN(nn.Module):
         x = self.dropout(self.relu(self.layer2(x)))
         x = self.relu(self.layer3(x))
         x = self.output(x)
+        #x = torch.sigmoid(self.layer1(x))
+        #x = self.dropout(torch.sigmoid(self.layer2(x)))
+        #x = torch.sigmoid(self.layer3(x))
+        #x = self.output(x)
         return x
 
 model = SimpleNN()
@@ -210,10 +214,10 @@ for epoch in range(num_epochs):
     all_labels = []
 
     for inputs, labels in train_loader:
-        print('inputs.shape',inputs.shape)
+        #print('inputs.shape',inputs.shape)
         optimizer.zero_grad()
         outputs = model(inputs)
-        print('outputs.shape',outputs.shape)
+        #print('outputs.shape',outputs.shape)
         #inputs.shape torch.Size([64, 69])
         #outputs.shape torch.Size([64, 2])
         loss = criterion(outputs, labels)
@@ -270,4 +274,3 @@ recall = true_positive / (true_positive + false_negative) if (true_positive + fa
 f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
 
 print(f"Test Accuracy: {100 * correct / total:.2f}%, Precision: {precision:.4f}, Recall: {recall:.4f}, F1 Score: {f1_score:.4f}")
-
