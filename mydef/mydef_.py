@@ -77,8 +77,8 @@ class Variable:
 
     #variable和function关系图
 
-    #         outputs                                   #存在循环引用
-    #           ->
+    #         outputs                                   #存在循环引用,导致变量无法被及时释放,使用弱引用,不会增加实参的
+    #           ->                                      #引用计数,当outputs被释放时,变量也会被及时释放
     #x -> A     ->  a   ->  B    ->  b  ->  C    ->  y
     #  <-       <-
     # input   creator
@@ -151,7 +151,7 @@ def as_variable(obj):
         return obj
     return Variable(obj)
 
-def numerical_diff(f, x, eps=1e-4):  #中心差分近似求数值微分
+def numerical_diff(f, x, eps=1e-10):  #中心差分近似求数值微分
     x0 = Variable(x.data - eps)
     x1 = Variable(x.data + eps)
     y0 = f(x0)
@@ -161,6 +161,16 @@ def numerical_diff(f, x, eps=1e-4):  #中心差分近似求数值微分
 class Function:
     def __call__(self, *inputs):
         #print("inputs:",inputs)
+        # 检查 inputs 是否是列表或元组
+        if not isinstance(inputs, (list, tuple)):
+            print("inputs:",inputs)
+            raise TypeError(f"In {self.__class__.__name__}: inputs must be a list or tuple, got {type(inputs).__name__}")
+        
+        # 检查 inputs 中的每个元素是否为 Variable
+        for i, input in enumerate(inputs):
+            if not isinstance(input, Variable):
+                print("input:",input)
+                raise TypeError(f"In {self.__class__.__name__}: input at index {i} is not a Variable, got {type(input).__name__}")
         inputs=[as_variable(input) for input in inputs]
         x = [x.data for x in inputs]
         #print("xxx:",x)
@@ -202,7 +212,7 @@ def check(l: list):
 
 class Exp(Function):
     def forward(self, x):
-        x = x - np.max(x)
+        #x = x - np.max(x)
         return np.exp(x)
     def backward(self, gy):#gy是上游传过来的梯度
         x = self.inputs[0] 
@@ -297,6 +307,7 @@ class Mul(Function):
         return gx, gy
 def mul(x, y):
     x1=as_variable(x)
+    y=as_variable(y)
     return Mul()(x1, y)#???
 
 class Neg(Function):
@@ -467,7 +478,7 @@ class Linearf(Function):
     def forward(self, x, W, b=None):
         #print("x:",x)
         #print("W:",W)
-        t = matmul(x, W)
+        t =np.dot(x, W)
         #print('t:',t)
         if b is None:
             return t.data

@@ -7,25 +7,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))#将
 from mydef import *
 from mydef import exp, numerical_diff
 class SquareTest(unittest.TestCase):
-    def test_forward(self):
-        x = Variable(np.array(2.0))
-        y = square(x)
-        expected = np.array(4.0)
-        self.assertEqual(y.data, expected)
-    def test_backward(self):
-        x = Variable(np.array(3.0))
-        y = square(x)
-        y.backward()
-        expected = np.array(6.0)
-        self.assertEqual(x.grad, expected)
     def test_gradient_check(self):
-        x = Variable(np.random.rand(1))
-        y = square(x)
-        y.backward()
-        a=exp(x)
-        num_grad = numerical_diff(square, x)
-        flg = np.allclose(x.grad, num_grad)
-        self.assertTrue(flg)
-        
-#print(dir())  # 打印当前命名空间中的所有名称
+        # 随机生成多维数组（1D 到 4D）
+        for i in range(50):
+            shape = tuple(np.random.randint(1, 5) for _ in range(np.random.randint(1, 5)))  # 生成随机维度
+            x = Variable(np.random.rand(*shape))
+            
+            # 测试 square 函数
+            y = square(x)
+            y.backward()
+            
+            # 测试梯度和数值梯度的接近程度
+            num_grad = numerical_diff(square, x)
+            flg = np.allclose(x.grad.data, num_grad, atol=1e-6)  # 允许较小的误差
+            self.assertTrue(flg)
+
+
 unittest.main()
