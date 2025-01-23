@@ -326,7 +326,7 @@ class Div(Function):
         return x / y
     def backward(self, gy):
         x, y = self.inputs[0],self.inputs[1]
-        check([x,y,gy])
+        #check([x,y,gy])
         gx = gy / y
         gy = gy * (-x / y ** 2)
         if self.x_shape != self.y_shape:
@@ -394,7 +394,7 @@ class Sum(Function):
         return y
     
     def backward(self, gy):
-        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)#TODO:ultis.reshape_sum_backward
+        gy = utils.reshape_sum_backward(gy, self.x_shape, self.axis, self.keepdims)
         gx = broadcast_to(gy, self.x_shape)
         return gx
     
@@ -455,7 +455,7 @@ def matmul(x, W):
 class MeanSquareError(Function):
     def forward(self, x0, x1):
         diff = x0 - x1 
-        y = (diff ** 2).sum() / len(diff)
+        y = (diff ** 2).sum() / len(diff)#TODO
         return y
     
     def backward(self ,gy):

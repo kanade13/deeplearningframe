@@ -127,7 +127,60 @@ class FunctionTest(unittest.TestCase):
             num_grad = numerical_diff(lambda x: pow(x, c), x)
             flg = np.allclose(x.grad.data, num_grad, atol=1e-6)
             self.assertTrue(flg)
+    def test_mean_squared_error(self):
+        for i in range(50):
+            shape = tuple(np.random.randint(1, 5) for _ in range(np.random.randint(1, 2)))
+            x = Variable(np.random.rand(*shape))
+            y = Variable(np.random.rand(*shape))
+            #print('x:',x)
+            #print('y:',y)
+            z = meansquarederror(x, y)
+            z.backward()
+            #print('x.grad.data:',x.grad.data)
+            #print('y.grad.data:',y.grad.data)
+            def numerical_diff(f, x, eps=1e-4):
+                grad = np.zeros_like(x.data)  # 初始化梯度，形状与 x 一致
+                it = np.nditer(x.data, flags=['multi_index'], op_flags=['readwrite'])
+                while not it.finished:
+                    idx = it.multi_index
+                    orig_value = x.data[idx]
+                    
+                    # 计算 f(x+eps)
+                    x.data[idx] = orig_value + eps
+                    y1 = f(x).data  # 多维数组
+                    
+                    # 计算 f(x-eps)
+                    x.data[idx] = orig_value - eps
+                    y0 = f(x).data  # 多维数组
+                    
+                    # 恢复原值
+                    x.data[idx] = orig_value
 
+                    # 求梯度：对多维输出的每个元素取导
+                    grad[idx] = np.sum((y1 - y0) / (2 * eps))
+                    it.iternext()
+                return grad
+            num_grad_x = numerical_diff(lambda x: meansquarederror(x, y), x)
+            num_grad_y = numerical_diff(lambda y: meansquarederror(x, y), y)
+            #print('num_grad_x:',num_grad_x)
+            #print('num_grad_y:',num_grad_y)
+            flg_x = np.allclose(x.grad.data, num_grad_x, atol=1e-6)
+            flg_y = np.allclose(y.grad.data, num_grad_y, atol=1e-6)
+            self.assertTrue(flg_x)
+            self.assertTrue(flg_y)
+    '''
+    def test_sum(self):
+        for i in range(50):
+            shape = tuple(np.random.randint(1, 5) for _ in range(np.random.randint(1, 5)))
+            x = Variable(np.random.rand(*shape))
+            a=np.random.randint(0, len(shape))
+            y = Sum(axis=a)(x)
+            y.backward()
+            num_grad = numerical_diff(Sum(axis=a), x)
+            print('x.grad.data:',x.grad.data)
+            print('num_grad:',num_grad)
+            flg = np.allclose(x.grad.data, num_grad, atol=1e-6)
+            self.assertTrue(flg)'''
     def test_matmul(self):
         for i in range(50):
             shape1 = (np.random.randint(1, 10), np.random.randint(1, 10))
@@ -242,5 +295,6 @@ class FunctionTest(unittest.TestCase):
             flg = np.allclose(x.grad.data, num_grad, atol=1e-6)
             self.assertTrue(flg)
     '''
+    
 if __name__ == '__main__':
     unittest.main()
